@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node / tauri
+node_modules/
+dist/
+frontend/src-tauri/target/
+frontend/src-tauri/gen/
+
+# os / tooling
+.DS_Store
+.idea/
+.vscode/
