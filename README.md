@@ -163,5 +163,13 @@ make shots      # regenerate the README screenshots and cover (needs Google Chro
 - Currencies are limited to USD, EUR, GBP, CAD and AUD (PayPal rejects decimals for zero-decimal currencies such as JPY).
 - Status polling runs while the success card is open and stops after 5 minutes or a final state.
 
+## Documentation
+
+| Document | What it covers |
+| :--- | :--- |
+| [User guide, guidelines and FAQ](docs/Mercury-Cmd-Guide.pptx) | PowerPoint: purpose, quick start, shortcuts, writing requests, safety, statuses, do and don't, four FAQ slides and a troubleshooting table |
+| [Testing and verification](docs/TESTING.md) | What is tested automatically and live, and scenarios you can try in the running app |
+| [Design and API spec](mercury_cmd_execution_spec.md) | Architecture, PayPal pipeline, parsing and grounding rules |
+
 ## License
 [MIT](LICENSE)
