@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #6ea2ff;
+  --color-ok: #3ddc97;
+  --color-warn: #ffb454;
+  --color-bad: #ff7b7b;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+html, body, #root { margin: 0; height: 100%; background: transparent; }
+body { font-family: var(--font-sans); color: #f5f5f7; -webkit-font-smoothing: antialiased; user-select: none; }
+input, select, button { font: inherit; color: inherit; }
+input, select { color-scheme: dark; user-select: text; }
+
+/* Desktop: the native hudWindow vibrancy supplies the blur; this layer only tints and outlines it. */
+.glass {
+  background: rgba(20, 22, 28, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Web mode (no native window): fake the surface so the palette is visible and still looks like glass. */
+html.web body {
+  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 20% -10%, #25304a 0%, transparent 60%), radial-gradient(900px 500px at 90% 10%, #3a2a4d 0%, transparent 55%), #0d0f14;
+}
+html.web #root { height: auto; padding: 12vh 16px 24px; display: flex; justify-content: center; }
+html.web .glass { background: rgba(24, 26, 33, 0.72); backdrop-filter: blur(28px) saturate(140%); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55); }
+
+@keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 600px 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+.field {
+  width: 100%; border-radius: 10px; padding: 7px 10px; font-size: 14px; outline: none;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+}
+.field:focus { border-color: var(--color-accent); background: rgba(255,255,255,0.09); }
+.field[aria-invalid="true"] { border-color: var(--color-warn); }
+.field:disabled { opacity: 0.55; }
+.kbd { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.10); }
