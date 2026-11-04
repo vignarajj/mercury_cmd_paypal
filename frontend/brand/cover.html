@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Mercury Cmd cover</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1500px; height: 1000px; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; color: #fff;
+    background: radial-gradient(1100px 700px at 8% 0%, #0a4fc4 0%, transparent 60%), radial-gradient(900px 700px at 100% 100%, #009cde55 0%, transparent 60%), #051031; position: relative; }
+  .left { position: absolute; left: 90px; top: 130px; width: 620px; }
+  .mark { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  .tag { display: block; width: fit-content; margin-top: 40px; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 22px; letter-spacing: .02em; color: #cfe0ff; }
+  h1 { margin-top: 24px; white-space: nowrap; font-size: 100px; line-height: 1; font-weight: 700; letter-spacing: -.03em; }
+  .sub { margin-top: 26px; font-size: 42px; line-height: 1.25; color: #dbe6ff; font-weight: 500; }
+  .sub b { color: #ffc439; font-weight: 700; }
+  ul { list-style: none; padding: 0; margin-top: 48px; display: grid; gap: 16px; }
+  li { font-size: 26px; color: #e9f0ff; display: flex; align-items: center; gap: 14px; }
+  li i { width: 12px; height: 12px; border-radius: 50%; background: #ffc439; box-shadow: 0 0 0 6px rgba(255,196,57,.2); }
+  .shot { position: absolute; border-radius: 22px; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
+  .a { width: 700px; left: 740px; top: 70px; }
+  .b { width: 700px; left: 690px; top: 620px; }
+  .foot { position: absolute; left: 90px; bottom: 56px; font-size: 22px; color: #9db4e6; }
+</style></head>
+<body>
+  <div class="left">
+    <img class="mark" src="app-icon.svg" alt="">
+    <div class="tag">Built for the PayPal AI Hackathon</div>
+    <h1>Mercury Cmd</h1>
+    <p class="sub">Say it in plain English.<br><b>Get paid</b> with PayPal.</p>
+    <ul><li><i></i>One hotkey, from any app</li><li><i></i>AI checked against your own words</li><li><i></i>Live status, from sent to paid</li></ul>
+  </div>
+  <img class="shot a" src="../../docs/img/preview-dark.png" alt="">
+  <img class="shot b" src="../../docs/img/paid-light.png" alt="">
+  <div class="foot">Sandbox only. No real money moves.</div>
+</body></html>

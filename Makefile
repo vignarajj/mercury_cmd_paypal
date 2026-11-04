@@ -1,4 +1,4 @@
-.PHONY: setup dev dev-web backend test test-backend test-frontend smoke eval
+.PHONY: setup dev dev-web backend test test-backend test-frontend smoke eval shots
 
 setup:            ## venv, deps, config + generated token
 	./scripts/setup.sh
@@ -26,3 +26,6 @@ smoke:            ## real PayPal sandbox round trip: make smoke TO=<sandbox buye
 
 eval:             ## run the parse corpus against the real local model
 	backend/.venv/bin/python scripts/eval_parser.py
+
+shots:            ## regenerate README screenshots and cover (needs Google Chrome)
+	./scripts/shots.sh

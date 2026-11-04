@@ -1,5 +1,7 @@
 # Mercury Cmd
 
+![Mercury Cmd: say it in plain English, get paid with PayPal](docs/img/cover.png)
+
 **A system-wide AI command palette that turns plain English into real PayPal invoices.**
 Press a hotkey from any app, type *"Bill sarah@acme.co $1,200 for brand refresh and $300 for icons, net 15"*, review an editable preview, press `⌘↵`, and a PayPal invoice is created, sent, and tracked until it is paid.
 
@@ -8,7 +10,15 @@ Press a hotkey from any app, type *"Bill sarah@acme.co $1,200 for brand refresh 
 > Built for the **PayPal AI Hackathon** (Oct 1 to Nov 12, 2026). Everything here was created during the submission period.
 > **Sandbox only:** no real money moves, and the backend refuses to start against a non-sandbox PayPal host.
 
-<!-- screenshots/GIF are added in the demo-video phase -->
+## Screenshots
+
+Real UI, rendered by the app itself (`make shots`). Dark and light themes follow the system setting, with a toggle in the footer.
+
+| | Dark | Light |
+| :--- | :---: | :---: |
+| **Describe it**: examples, recent invoices, live entity highlighting | <img src="docs/img/empty-dark.png" width="380" alt="Empty state, dark"> | <img src="docs/img/empty-light.png" width="380" alt="Empty state, light"> |
+| **Review it**: editable preview, checked against your words | <img src="docs/img/preview-dark.png" width="380" alt="Invoice preview, dark"> | <img src="docs/img/preview-light.png" width="380" alt="Invoice preview, light"> |
+| **Track it**: Created, Sent, Paid, live | <img src="docs/img/paid-dark.png" width="380" alt="Payment received, dark"> | <img src="docs/img/paid-light.png" width="380" alt="Payment received, light"> |
 
 ---
 
@@ -20,7 +30,9 @@ Press a hotkey from any app, type *"Bill sarah@acme.co $1,200 for brand refresh 
 - **Review before anything is sent.** An editable preview card with live totals and amber "Missing: email" badges.
 - **Full PayPal loop.** Create draft → send → payer link → **live status** (Sent → Paid) right in the palette.
 - **Safe by construction.** Duplicate submits create one invoice; a failed send keeps the draft and offers *Retry send*; invoicing your own merchant account is blocked before any API call.
-- **Keyboard-first.** Global hotkey, `⌘↵` to send, `Esc` to step back, `⌘C` to copy the payment link.
+- **You can see what the AI understood.** As you type, the email, amounts and payment terms light up in the input, and the preview fills in field by field.
+- **A real product feel.** Empty state with one-click examples, a recent-invoices list with live status, a Created → Sent → Paid timeline, a PayPal-blue palette in dark and light themes, and a menu-bar icon with Open and Quit.
+- **Accessible.** Keyboard-first (global hotkey, `⌘↵` to send, `Esc` to step back, `⌘C` to copy the link, arrow keys through examples), labelled controls, a `main` landmark, reduced-motion support, and WCAG AA contrast checked by tests in both themes.
 
 ## How PayPal is used (PayPal Invoicing API v2, sandbox)
 
@@ -125,16 +137,18 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 | `backend/app/services/ai_service.py` | Ollama client, JSON schema, LLM → regex orchestration |
 | `backend/app/services/regex_parser.py` | Deterministic fallback parser |
 | `frontend/src/hooks/usePalette.ts` | The palette state machine |
-| `frontend/src/components/` | Palette, preview card, success card with live status |
+| `frontend/src/components/` | Palette, entity-highlighting input, preview card, success card with live status, recents |
+| `frontend/src/index.css` | Theme tokens (dark and light) as CSS variables |
 | `frontend/src-tauri/src/lib.rs` | Hotkey, window show/hide, blur handling |
 | `scripts/` | `setup.sh`, `dev.sh`, `paypal_smoke.py`, `eval_parser.py` |
 
 ## Tests
 
 ```bash
-make test       # 153 backend tests (mocked PayPal and Ollama) + 20 frontend tests + type check
+make test       # 153 backend tests (mocked PayPal and Ollama) + 72 frontend tests (logic, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
+make shots      # regenerate the README screenshots and cover (needs Google Chrome)
 ```
 
 ## Security notes
