@@ -14,14 +14,15 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Area | Tests | What they prove |
 | :--- | :---: | :--- |
 | Backend, PayPal service and API (`test_paypal.py`, `test_api.py`) | 41 | Token caching and refresh, create, send with retry, idempotency, partial-failure retry, error mapping, self-invoice block, CORS, auth token, sandbox-only guard |
+| Backend, AI model list and switching (`test_models_api.py`) | 10 | Only local chat models listed (cloud and embedding models hidden), switch applies at once and is remembered, saved choice beats `OLLAMA_MODEL`, rejects missing models, offline and disabled states, corrupt preferences file ignored |
 | Backend, history, detail and info (`test_history.py`) | 9 | PayPal search mapped and sorted newest first, status and email filters, text search, input validation, invoice detail with items, dates and payments, `/api/info` health and no secrets |
 | Backend, parsing (`test_parse.py`) | 112 | 33-case corpus through the rule-based parser and through grounding; hallucinated email and amount dropped; fallback when Ollama fails, is slow or returns junk |
 | Frontend logic (`invoice`, `entities`, `recents`, `format`) | 50 | Exact money math, validation, request building, entity highlighting, recents store, history filters and query building, dates and labels |
 | Frontend status polling (`useInvoiceStatus`) | 6 | Polls for an hour with backoff, keeps going past five minutes, re-checks on focus, stops at a final status |
 | Frontend palette flow (`palette.flow.test.tsx`) | 6 | Box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
-| Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 22 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, theme and clearing recents |
+| Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 27 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, AI model picker (switch, failure, setup steps, Ollama off, AI disabled), theme and clearing recents |
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
-| **Total** | **270** | Backend 162, frontend 108, plus a clean TypeScript check |
+| **Total** | **285** | Backend 172, frontend 113, plus a clean TypeScript check |
 
 Related commands: `make eval` (parse corpus against the real model), `make smoke TO=<buyer email>` (real PayPal round trip), `make shots` (regenerate screenshots).
 
@@ -138,6 +139,9 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 | 53 | Theme control | System, Light, Dark | The whole Dashboard switches and remembers it | Live (browser), Automated |
 | 54 | Backend offline | Stop the backend and open the Dashboard | A clear message and a Try again button | Automated |
 | 55 | Keep palette open, Quit | Settings, Palette and About cards | Switch pins the palette; Quit closes the app | To verify (desktop) |
+| 56 | Choose the AI model | **Settings → AI model**, pick another installed model | "Now using …"; the next parse uses it; it is still selected after restarting the backend | Automated, Live (list, API) |
+| 57 | Model setup help | Stop Ollama or remove the model, open Settings | Plain steps: install Ollama, copy `ollama pull …`, press Check again | Automated, To verify (UI) |
+| 58 | Dock icon | Run the app and look at the Dock while the Dashboard is open | The Mercury Cmd icon, not the generic "exec" icon | To verify (desktop) |
 
 ## 4. Known gaps
 

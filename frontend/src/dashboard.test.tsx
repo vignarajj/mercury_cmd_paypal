@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import axe from "axe-core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BackendInfo, InvoiceDetail, InvoiceList, InvoiceSummary } from "./lib/types";
+import type { BackendInfo, InvoiceDetail, InvoiceList, InvoiceSummary, ModelState } from "./lib/types";
 
 const summary = (n: number, over: Partial<InvoiceSummary> = {}): InvoiceSummary => ({
   invoice_id: `INV2-AAAA-BBBB-CCCC-${String(n).padStart(4, "0")}`, number: String(n).padStart(4, "0"), status: "SENT",
@@ -20,10 +20,14 @@ const INFO: BackendInfo = {
   llm: { provider: "ollama", model: "gemma4:e2b-it-qat", status: "ok" },
 };
 
+const MODELS: ModelState = {
+  provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434",
+  models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B" }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B" }],
+};
 const rows = [summary(3, { status: "PAID" }), summary(2), summary(1)];
 vi.mock("./lib/api", async (orig) => ({
   ...(await orig<typeof import("./lib/api")>()),
-  api: { invoices: vi.fn(), invoiceDetail: vi.fn(), info: vi.fn() },
+  api: { invoices: vi.fn(), invoiceDetail: vi.fn(), info: vi.fn(), models: vi.fn(), setModel: vi.fn() },
 }));
 import { api, ApiError } from "./lib/api";
 import Dashboard from "./components/dashboard/Dashboard";
@@ -37,6 +41,8 @@ beforeEach(() => {
   vi.mocked(api.invoices).mockReset().mockResolvedValue(list(rows));
   vi.mocked(api.invoiceDetail).mockReset().mockImplementation(async (id) => detail(rows.find((r) => r.invoice_id === id) ?? rows[0]));
   vi.mocked(api.info).mockReset().mockResolvedValue(INFO);
+  vi.mocked(api.models).mockReset().mockResolvedValue(MODELS);
+  vi.mocked(api.setModel).mockReset();
 });
 afterEach(cleanup);
 
@@ -126,18 +132,59 @@ describe("Settings", () => {
   it("shows live connection status and never secrets", async () => {
     render(<Dashboard />);
     expect(await screen.findByText("Connected")).toBeTruthy();
-    expect(screen.getByText("Ready")).toBeTruthy();
+    expect(await screen.findByText("Ready")).toBeTruthy();
     expect(screen.getByText(/merchant@business\.example\.com/)).toBeTruthy();
     expect(screen.getByText(/Connected · v0\.1\.0/)).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/secret|password|token/i);
   });
 
-  it("explains a missing model and a PayPal credential problem", async () => {
-    vi.mocked(api.info).mockResolvedValue({ ...INFO, llm: { ...INFO.llm, status: "model_missing" }, paypal: { ...INFO.paypal, status: "error", error: "PayPal rejected the sandbox credentials." } });
+  it("explains a PayPal credential problem", async () => {
+    vi.mocked(api.info).mockResolvedValue({ ...INFO, paypal: { ...INFO.paypal, status: "error", error: "PayPal rejected the sandbox credentials." } });
     render(<Dashboard />);
-    expect(await screen.findByText("Model not installed")).toBeTruthy();
-    expect(screen.getByText("Run: ollama pull gemma4:e2b-it-qat")).toBeTruthy();
-    expect(screen.getByText("PayPal rejected the sandbox credentials.")).toBeTruthy();
+    expect(await screen.findByText("PayPal rejected the sandbox credentials.")).toBeTruthy();
+  });
+
+  it("lists installed local models and switches the model", async () => {
+    vi.mocked(api.setModel).mockResolvedValue({ ...MODELS, current: "qwen3:4b" });
+    render(<Dashboard />);
+    const select = (await screen.findByRole("combobox", { name: "AI model" })) as HTMLSelectElement;
+    expect(select.value).toBe("gemma4:e2b-it-qat");
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "gemma4:e2b-it-qat (recommended) · 4.3 GB", "qwen3:4b · 2.5 GB",
+    ]);
+    fireEvent.change(select, { target: { value: "qwen3:4b" } });
+    expect(await screen.findByText("Now using qwen3:4b.")).toBeTruthy();
+    expect(api.setModel).toHaveBeenCalledWith("qwen3:4b");
+    expect(await screen.findByText(/has been tested against/)).toBeTruthy();
+  });
+
+  it("shows why a switch failed", async () => {
+    vi.mocked(api.setModel).mockRejectedValue(new ApiError("MODEL_NOT_INSTALLED", "qwen3:4b isn't installed locally. Run: ollama pull qwen3:4b", false));
+    render(<Dashboard />);
+    fireEvent.change(await screen.findByRole("combobox", { name: "AI model" }), { target: { value: "qwen3:4b" } });
+    expect((await screen.findByRole("alert")).textContent).toMatch(/isn't installed locally/);
+  });
+
+  it("walks through setup when the model is missing", async () => {
+    vi.mocked(api.models).mockResolvedValue({ ...MODELS, status: "model_missing", models: [] });
+    render(<Dashboard />);
+    expect(await screen.findByText("Not installed")).toBeTruthy();
+    expect(screen.getByText(/Install Ollama/)).toBeTruthy();
+    expect(screen.getByText("ollama pull gemma4:e2b-it-qat")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy ollama pull gemma4:e2b-it-qat" })).toBeTruthy();
+  });
+
+  it("says so when Ollama is not running", async () => {
+    vi.mocked(api.models).mockResolvedValue({ ...MODELS, status: "offline", models: [] });
+    render(<Dashboard />);
+    expect(await screen.findByText("Ollama not running")).toBeTruthy();
+    expect(screen.getByText(/Start Ollama/)).toBeTruthy();
+  });
+
+  it("explains Basic mode when AI parsing is turned off", async () => {
+    vi.mocked(api.models).mockResolvedValue({ ...MODELS, status: "disabled", current: null, models: [] });
+    render(<Dashboard />);
+    expect(await screen.findByText("AI parsing is turned off")).toBeTruthy();
   });
 
   it("offers a retry when the backend is down", async () => {

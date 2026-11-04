@@ -1,7 +1,7 @@
 // Dev-only: renders the real palette in fixed states for README and cover screenshots (see scripts/shots.sh).
 import type { State } from "./hooks/usePalette";
 import { api } from "./lib/api";
-import type { BackendInfo, InvoiceDetail, InvoiceSummary } from "./lib/types";
+import type { BackendInfo, InvoiceDetail, InvoiceSummary, ModelState } from "./lib/types";
 import { applyMode } from "./lib/theme";
 
 const NOW = Date.now();
@@ -55,8 +55,14 @@ const dashDetail = (s: InvoiceSummary): InvoiceDetail => {
   };
 };
 
+const DASH_MODELS: ModelState = {
+  provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434",
+  models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B" }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B" }],
+};
+
 function installDashboardMocks() {
   Object.assign(api, {
+    models: async () => DASH_MODELS,
     invoices: async () => ({ items: DASH_ROWS, page: 1, page_size: 10, total_items: DASH_ROWS.length, total_pages: 1 }),
     invoiceDetail: async (id: string) => dashDetail(DASH_ROWS.find((r) => r.invoice_id === id) ?? DASH_ROWS[0]),
     info: async () => DASH_INFO,

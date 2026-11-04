@@ -34,7 +34,7 @@ Real UI, rendered by the app itself (`make shots`). Dark and light themes follow
 - **Safe by construction.** Duplicate submits create one invoice; a failed send keeps the draft and offers *Retry send*; invoicing your own merchant account is blocked before any API call.
 - **You can see what the AI understood.** As you type, the email, amounts and payment terms light up in the input, and the preview fills in field by field.
 - **A real product feel.** Empty state with one-click examples, a recent-invoices list with live status, a Created → Sent → Paid timeline, a PayPal-blue palette in dark and light themes, and a menu-bar icon with Open and Quit.
-- **A full Dashboard.** A real window (title bar, minimize, zoom, resize) with your whole invoice history from PayPal, status filters and search, a detail view for every invoice (items, totals, dates, payments, transaction ID), and Settings with live PayPal, AI and backend health.
+- **A full Dashboard.** A real window (title bar, minimize, zoom, resize) with your whole invoice history from PayPal, status filters and search, a detail view for every invoice (items, totals, dates, payments, transaction ID), and Settings with theme, shortcut, pinning, an AI model picker with setup steps, and live PayPal and backend health.
 - **Made for repeat use.** The box clears after a send and typing starts the next invoice, `Esc` starts over without closing, `⌘N` starts a new one, a pin keeps the palette open, and it opens on the screen you are using.
 - **Accessible.** Keyboard-first (global hotkey, `⌘↵` to send, `⌘N` for a new invoice, `⌘,` for the Dashboard, `Esc` to step back, `⌘C` to copy the link, arrow keys through examples), labelled controls, a `main` landmark, reduced-motion support, and WCAG AA contrast checked by tests in both themes.
 
@@ -88,10 +88,15 @@ Testers of this submission: sandbox credentials are provided in the Devpost *tes
 5. Note the **Personal** account's sandbox email: that is who you invoice. It must not be the Business email.
 
 ### 3. Optional: the AI parser
-```bash
-ollama pull gemma4:e2b-it-qat
-```
+1. Install [Ollama](https://ollama.com/download) and open it.
+2. Download the tested model:
+   ```bash
+   ollama pull gemma4:e2b-it-qat
+   ```
+
 Skip this and Mercury still works in rule-based "Basic mode" (single item per invoice).
+
+**Choosing a different model.** Open **Dashboard → Settings → AI model**. It lists the models installed in your Ollama and switches the moment you pick one; the choice is remembered in `backend/.mercury-prefs.json` (git-ignored). The default for a fresh checkout is `OLLAMA_MODEL` in `backend/.env`. Cloud models are hidden on purpose so your text stays on this computer. Only `gemma4:e2b-it-qat` has been checked against the 33-case corpus; with another model, review the preview before sending (`make eval` with `OLLAMA_MODEL=<name>` measures it).
 
 ### 4. Run
 
@@ -154,7 +159,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 ## Tests
 
 ```bash
-make test       # 162 backend tests (mocked PayPal and Ollama) + 108 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
+make test       # 172 backend tests (mocked PayPal and Ollama) + 113 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
 make shots      # regenerate the README screenshots and cover (needs Google Chrome)

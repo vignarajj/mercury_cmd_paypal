@@ -41,3 +41,11 @@ export interface BackendInfo {
   paypal: { status: "ok" | "error"; error: string | null; host: string; mode: string; merchant_email: string | null };
   llm: { provider: string; model: string | null; status: "ok" | "model_missing" | "offline" | "disabled" };
 }
+export interface ModelState {
+  provider: string;
+  status: "ok" | "model_missing" | "offline" | "disabled";
+  current: string | null;
+  default: string;
+  base_url: string | null;
+  models: { name: string; size_bytes: number | null; parameters: string | null }[];
+}

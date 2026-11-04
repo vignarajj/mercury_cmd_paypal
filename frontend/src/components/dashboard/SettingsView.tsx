@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, CircleDot, Keyboard, LogOut, Monitor, Moon, Pin, RefreshCw, ShieldCheck, Sun, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Keyboard, LogOut, Monitor, Moon, Pin, RefreshCw, ShieldCheck, Sun, Trash2 } from "lucide-react";
 import { usePinned } from "../../hooks/usePinned";
 import { useRequest } from "../../hooks/useRequest";
 import { useTheme } from "../../hooks/useTheme";
@@ -7,54 +7,15 @@ import { api } from "../../lib/api";
 import { prettyHotkey } from "../../lib/format";
 import { loadRecents, saveRecents } from "../../lib/recents";
 import { getAppInfo, isTauri, quitApp, type AppInfo } from "../../lib/tauri";
-import type { BackendInfo } from "../../lib/types";
 import { Segmented, Switch } from "./Controls";
+import ModelCard from "./ModelCard";
+import { Badge, Card, Row } from "./SettingsParts";
 
 const THEME_OPTIONS = [
   { value: "system", label: "System", icon: <Monitor size={14} aria-hidden /> },
   { value: "light", label: "Light", icon: <Sun size={14} aria-hidden /> },
   { value: "dark", label: "Dark", icon: <Moon size={14} aria-hidden /> },
 ] as const;
-
-type Tone = "ok" | "warn" | "bad";
-const TONE_CLASS: Record<Tone, string> = { ok: "bg-ok/15 text-ok", warn: "bg-warn/15 text-warn", bad: "bg-bad/15 text-bad" };
-
-function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium ${TONE_CLASS[tone]}`}><CircleDot size={11} aria-hidden />{children}</span>;
-}
-
-function Card({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <section aria-labelledby={id} className="glass shrink-0">
-      <div className="border-b border-line px-5 py-3.5">
-        <h2 id={id} className="text-[15px] font-semibold">{title}</h2>
-        {description && <p className="mt-0.5 text-[13px] text-ink-faint">{description}</p>}
-      </div>
-      <div className="divide-y divide-line">{children}</div>
-    </section>
-  );
-}
-
-function Row({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6 px-5 py-3.5">
-      <div className="min-w-0">
-        <div className="text-[14px] font-medium">{label}</div>
-        {hint && <div className="mt-0.5 text-[12.5px] text-ink-faint">{hint}</div>}
-      </div>
-      <div className="shrink-0 text-right text-[13.5px]">{children}</div>
-    </div>
-  );
-}
-
-const llmView = (info: BackendInfo["llm"]): { tone: Tone; text: string; hint: string } => {
-  switch (info.status) {
-    case "ok": return { tone: "ok", text: "Ready", hint: `${info.model} runs locally. Your text stays on this computer.` };
-    case "model_missing": return { tone: "warn", text: "Model not installed", hint: `Run: ollama pull ${info.model}` };
-    case "offline": return { tone: "warn", text: "Ollama not running", hint: "Mercury Cmd uses its rule-based parser (Basic mode) until Ollama is started." };
-    default: return { tone: "warn", text: "Disabled", hint: "LLM_PROVIDER=none: Basic mode only (one item per invoice)." };
-  }
-};
 
 export default function SettingsView() {
   const theme = useTheme();
@@ -97,6 +58,8 @@ export default function SettingsView() {
         )}
       </Card>
 
+      <ModelCard onChanged={info.reload} />
+
       <Card id="connections" title="Connections" description="Live status of everything Mercury Cmd talks to.">
         {info.error && !b ? (
           <div role="alert" className="flex items-start gap-3 px-5 py-4 text-[13.5px] text-bad">
@@ -114,8 +77,7 @@ export default function SettingsView() {
             <Row label="PayPal sandbox" hint={<>{b.paypal.host}{b.paypal.merchant_email && <><br />Merchant: {b.paypal.merchant_email}</>}</>}>
               {b.paypal.status === "ok" ? <Badge tone="ok">Connected</Badge> : <Badge tone="bad">{b.paypal.error ?? "Error"}</Badge>}
             </Row>
-            <Row label="AI parser" hint={llmView(b.llm).hint}><Badge tone={llmView(b.llm).tone}>{llmView(b.llm).text}</Badge></Row>
-            <Row label="Backend" hint="The local service that talks to PayPal and the AI model."><Badge tone="ok">Connected · v{b.version}</Badge></Row>
+            <Row label="Backend" hint="The local service that talks to PayPal and Ollama."><Badge tone="ok">Connected · v{b.version}</Badge></Row>
             <div className="flex justify-end px-5 py-2.5">
               <button type="button" onClick={info.reload} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-dim transition hover:bg-surface-2 hover:text-ink">
                 <RefreshCw size={13} aria-hidden className={info.loading ? "animate-spin" : ""} />Check again

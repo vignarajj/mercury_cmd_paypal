@@ -329,11 +329,16 @@ All require `X-Mercury-Token`.
 | :--- | :--- |
 | `GET /api/invoices?page=&page_size=&status=&q=` | The merchant's invoices from PayPal (`POST /v2/invoicing/search-invoices`), newest first. `status` is repeatable and validated; an email in `q` is sent to PayPal as `recipient_email`, other text filters the returned page by email, number or id. `page_size` is 1 to 100. Verified against the sandbox |
 | `GET /api/invoice/{id}/detail` | Items with line totals, invoice date, sent time, terms, due date, note, paid and due amounts, and payment transactions |
+| `GET /api/models` | Local chat models installed in Ollama (cloud and embedding-only models are left out), the current and default model, and Ollama's status (`ok`, `model_missing`, `offline`, `disabled`) |
+| `POST /api/model` | Body `{"model": "<name>"}`. Switches the parsing model without a restart and remembers it in `backend/.mercury-prefs.json`. Rejects models that are not installed locally (`MODEL_NOT_INSTALLED`, 422), a stopped Ollama (`LLM_OFFLINE`, 503) and `LLM_PROVIDER=none` (`LLM_DISABLED`, 409) |
 | `GET /api/info` | Read-only settings and live health: PayPal status, host and merchant email; AI provider, model and status; backend version. Never includes credentials or the shared token |
 
 ### Screens
 - **Invoices:** search and status chips (All, Awaiting payment, Paid, Draft or scheduled, Cancelled or refunded), a list with client, number, date, amount and status, paging, and a detail pane with the Created, Sent, Paid timeline and Copy link, Open and Copy ID actions.
-- **Settings:** theme (System, Light, Dark), shortcut and registration state, pin switch, live connection health with retry, recent invoices stored on this device (with Clear), About, and Quit (desktop).
+- **Settings:** theme (System, Light, Dark), AI model (installed models, switch, and install steps when Ollama or the model is missing), shortcut and registration state, pin switch, live connection health with retry, recent invoices stored on this device (with Clear), About, and Quit (desktop).
 
 ### Status polling
 The success card polls `GET /api/invoice/{id}` every 4 s for 2 minutes, then every 15 s for up to an hour, stops at a final status, and re-checks immediately when the window regains focus.
+
+### Dock icon
+A packaged build takes its Dock icon from `icon.icns`. A `tauri dev` build is a bare binary, so macOS would show the generic "exec" icon; the app therefore also sets its icon at startup from `icons/icon.png`. The icon artwork (`frontend/brand/app-icon-macos.svg`) has the usual transparent margin so it sits at the same size as other Dock icons.
