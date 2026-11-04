@@ -1,36 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import { Check, Copy, ExternalLink, Plus } from "lucide-react";
-import { api } from "../lib/api";
-import { FINAL_STATUSES, formatMoney } from "../lib/invoice";
+import { useInvoiceStatus } from "../hooks/useInvoiceStatus";
+import { formatMoney } from "../lib/invoice";
 import { openExternal } from "../lib/tauri";
 import type { InvoiceResult } from "../lib/types";
 import StatusPill, { isPaid } from "./StatusPill";
-
-const POLL_MS = 4000;
-const POLL_MAX_MS = 5 * 60_000;
-
-/** Poll the invoice every 4 s until it reaches a final state or 5 minutes pass. */
-function useInvoiceStatus(invoiceId: string, initial: string) {
-  const [status, setStatus] = useState(initial);
-  useEffect(() => {
-    let stopped = false;
-    const started = Date.now();
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = async () => {
-      if (stopped || Date.now() - started > POLL_MAX_MS) return;
-      try {
-        const s = await api.status(invoiceId);
-        if (!stopped) setStatus(s.status);
-        if (FINAL_STATUSES.has(s.status)) return;
-      } catch { /* transient: keep polling */ }
-      if (!stopped) timer = setTimeout(tick, POLL_MS);
-    };
-    timer = setTimeout(tick, POLL_MS);
-    return () => { stopped = true; clearTimeout(timer); };
-  }, [invoiceId]);
-  return status;
-}
 
 const STEPS = ["Created", "Sent", "Paid"] as const;
 const stepOf = (s: string) => (isPaid(s) ? 2 : s === "DRAFT" ? 0 : 1);
