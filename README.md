@@ -87,16 +87,28 @@ Testers of this submission: sandbox credentials are provided in the Devpost *tes
    ```
 5. Note the **Personal** account's sandbox email: that is who you invoice. It must not be the Business email.
 
-### 3. Optional: the AI parser
-1. Install [Ollama](https://ollama.com/download) and open it.
-2. Download the tested model:
+### 3. Optional: the AI parser (Ollama)
+Mercury Cmd reads your sentence with a model that runs on your own computer through [Ollama](https://ollama.com). Setup takes a few minutes, once:
+
+1. **Install Ollama.** Download the Mac app from [ollama.com/download](https://ollama.com/download) and open it (a llama icon appears in the menu bar), or run `brew install ollama` and then `ollama serve` in a Terminal window you leave open.
+2. **Download the tested model** (about 4.3 GB, one time):
    ```bash
    ollama pull gemma4:e2b-it-qat
    ```
+3. **Check it is there:**
+   ```bash
+   ollama list
+   ```
+4. Start Mercury Cmd. **Dashboard → Settings → AI model** should say **Ready**.
 
-Skip this and Mercury still works in rule-based "Basic mode" (single item per invoice).
+The same steps, with copy buttons, are in **Settings → AI model → How to set up Ollama and a local model**. If you skip this section, Mercury still works in rule-based "Basic mode" (single item per invoice).
 
-**Choosing a different model.** Open **Dashboard → Settings → AI model**. It lists the models installed in your Ollama and switches the moment you pick one; the choice is remembered in `backend/.mercury-prefs.json` (git-ignored). The default for a fresh checkout is `OLLAMA_MODEL` in `backend/.env`. Cloud models are hidden on purpose so your text stays on this computer. Only `gemma4:e2b-it-qat` has been checked against the 33-case corpus; with another model, review the preview before sending (`make eval` with `OLLAMA_MODEL=<name>` measures it).
+**Choosing a different model.** Run `ollama pull <name>`, press **Check again** in Settings and pick it from the list. It applies right away and is remembered in `backend/.mercury-prefs.json` (git-ignored). The default for a fresh checkout is `OLLAMA_MODEL` in `backend/.env`.
+
+- Settings lists every model your Ollama has. Cloud models (names ending in `:cloud`) and embedding models are shown greyed out with the reason: cloud models run on ollama.com, so your text would leave the computer, and embedding models cannot read a sentence.
+- Only `gemma4:e2b-it-qat` has been checked against the 33-case corpus. With another model, read the preview before sending, or measure it with `OLLAMA_MODEL=<name> make eval`.
+- Ollama on a different machine or port: set `OLLAMA_BASE_URL` in `backend/.env` and restart the backend.
+- The first read after starting can take about 10 seconds while the model loads; later ones take 2 to 3 seconds.
 
 ### 4. Run
 
@@ -159,7 +171,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 ## Tests
 
 ```bash
-make test       # 172 backend tests (mocked PayPal and Ollama) + 113 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
+make test       # 172 backend tests (mocked PayPal and Ollama) + 115 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
 make shots      # regenerate the README screenshots and cover (needs Google Chrome)

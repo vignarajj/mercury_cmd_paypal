@@ -58,6 +58,7 @@ const dashDetail = (s: InvoiceSummary): InvoiceDetail => {
 const DASH_MODELS: ModelState = {
   provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434",
   models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B" }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B" }],
+  unavailable: [{ name: "nomic-embed-text:latest", reason: "embedding" }, { name: "qwen3.5:cloud", reason: "cloud" }],
 };
 
 function installDashboardMocks() {

@@ -48,4 +48,5 @@ export interface ModelState {
   default: string;
   base_url: string | null;
   models: { name: string; size_bytes: number | null; parameters: string | null }[];
+  unavailable: { name: string; reason: "cloud" | "embedding" }[];
 }

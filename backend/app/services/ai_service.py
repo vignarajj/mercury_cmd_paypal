@@ -114,30 +114,32 @@ class OllamaClient:
         except (httpx.HTTPError, TimeoutError):
             return False
 
-    async def installed_models(self) -> list[dict] | None:
-        """Local chat models installed in Ollama, or None when Ollama cannot be reached.
+    async def installed_models(self) -> tuple[list[dict], list[dict]] | None:
+        """Everything Ollama has, split into (usable, unavailable); None when Ollama cannot be reached.
 
-        Cloud models (they run on ollama.com, so the text would leave this computer) and embedding-only
-        models are left out.
+        Cloud models run on ollama.com, so the text would leave this computer, and embedding-only models
+        cannot read a sentence; both are reported with the reason instead of silently dropped.
         """
         try:
             resp = await self._http.get(f"{self._s.ollama_base_url}/api/tags", timeout=2)
             raw = resp.json().get("models", [])
         except (httpx.HTTPError, ValueError, TimeoutError):
             return None
-        out = []
+        usable: list[dict] = []
+        unavailable: list[dict] = []
         for m in raw:
             name = m.get("name", "")
+            if not name:
+                continue
             caps = m.get("capabilities")
-            if not name or m.get("remote_host") or name.endswith(":cloud"):
-                continue
-            if caps is not None and "completion" not in caps:
-                continue
-            if caps is None and "embed" in name:
-                continue
-            details = m.get("details") or {}
-            out.append({"name": name, "size_bytes": m.get("size"), "parameters": details.get("parameter_size") or None})
-        return sorted(out, key=lambda m: m["name"])
+            if m.get("remote_host") or name.endswith(":cloud"):
+                unavailable.append({"name": name, "reason": "cloud"})
+            elif (caps is not None and "completion" not in caps) or (caps is None and "embed" in name):
+                unavailable.append({"name": name, "reason": "embedding"})
+            else:
+                details = m.get("details") or {}
+                usable.append({"name": name, "size_bytes": m.get("size"), "parameters": details.get("parameter_size") or None})
+        return sorted(usable, key=lambda x: x["name"]), sorted(unavailable, key=lambda x: x["name"])
 
     async def health(self) -> str:
         """'ok' | 'model_missing' | 'offline'"""

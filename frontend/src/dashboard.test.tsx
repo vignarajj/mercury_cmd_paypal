@@ -23,6 +23,7 @@ const INFO: BackendInfo = {
 const MODELS: ModelState = {
   provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434",
   models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B" }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B" }],
+  unavailable: [{ name: "nomic-embed-text:latest", reason: "embedding" }, { name: "qwen3.5:cloud", reason: "cloud" }],
 };
 const rows = [summary(3, { status: "PAID" }), summary(2), summary(1)];
 vi.mock("./lib/api", async (orig) => ({
@@ -158,6 +159,23 @@ describe("Settings", () => {
     expect(await screen.findByText(/has been tested against/)).toBeTruthy();
   });
 
+  it("says which Ollama models can't be used and why", async () => {
+    render(<Dashboard />);
+    expect(await screen.findByText("2 other models in Ollama can't be used here")).toBeTruthy();
+    expect(screen.getByText("nomic-embed-text:latest")).toBeTruthy();
+    expect(screen.getByText(/Search model; it can't read a sentence/)).toBeTruthy();
+    expect(screen.getByText("qwen3.5:cloud")).toBeTruthy();
+    expect(screen.getByText(/your text would leave this computer/)).toBeTruthy();
+  });
+
+  it("includes a four-step Ollama setup guide, closed once a model is ready", async () => {
+    render(<Dashboard />);
+    const summary = await screen.findByText("How to set up Ollama and a local model");
+    expect((summary.closest("details") as HTMLDetailsElement).open).toBe(false);
+    for (const step of ["Install Ollama", "Make sure it is running", "Download a model (one time)", "Check it worked"]) expect(screen.getByText(step)).toBeTruthy();
+    for (const cmd of ["brew install ollama", "ollama serve", "ollama pull gemma4:e2b-it-qat", "ollama list"]) expect(screen.getByText(cmd)).toBeTruthy();
+  });
+
   it("shows why a switch failed", async () => {
     vi.mocked(api.setModel).mockRejectedValue(new ApiError("MODEL_NOT_INSTALLED", "qwen3:4b isn't installed locally. Run: ollama pull qwen3:4b", false));
     render(<Dashboard />);
@@ -169,7 +187,8 @@ describe("Settings", () => {
     vi.mocked(api.models).mockResolvedValue({ ...MODELS, status: "model_missing", models: [] });
     render(<Dashboard />);
     expect(await screen.findByText("Not installed")).toBeTruthy();
-    expect(screen.getByText(/Install Ollama/)).toBeTruthy();
+    expect((screen.getByText("How to set up Ollama and a local model").closest("details") as HTMLDetailsElement).open).toBe(true);
+    expect(screen.getByText("Install Ollama")).toBeTruthy();
     expect(screen.getByText("ollama pull gemma4:e2b-it-qat")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy ollama pull gemma4:e2b-it-qat" })).toBeTruthy();
   });

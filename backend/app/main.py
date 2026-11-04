@@ -135,11 +135,12 @@ def create_app(
         ollama = request.app.state.ollama
         if ollama is None:
             return {"provider": s.llm_provider, "status": "disabled", "current": None, "default": DEFAULT_MODEL,
-                    "base_url": None, "models": []}
-        models = await ollama.installed_models()
-        status = "offline" if models is None else await ollama.health()
+                    "base_url": None, "models": [], "unavailable": []}
+        found = await ollama.installed_models()
+        status = "offline" if found is None else await ollama.health()
+        usable, unavailable = found or ([], [])
         return {"provider": "ollama", "status": status, "current": ollama.model, "default": DEFAULT_MODEL,
-                "base_url": s.ollama_base_url, "models": models or []}
+                "base_url": s.ollama_base_url, "models": usable, "unavailable": unavailable}
 
     @api.get("/models")
     async def list_models(request: Request) -> dict:
@@ -152,10 +153,10 @@ def create_app(
         ollama = request.app.state.ollama
         if ollama is None:
             raise MercuryError("LLM_DISABLED", "AI parsing is turned off (LLM_PROVIDER=none in backend/.env).", 409)
-        models = await ollama.installed_models()
-        if models is None:
+        found = await ollama.installed_models()
+        if found is None:
             raise MercuryError("LLM_OFFLINE", "Ollama isn't running. Start it, then choose a model.", 503, retryable=True)
-        if body.model not in {m["name"] for m in models}:
+        if body.model not in {m["name"] for m in found[0]}:
             raise MercuryError("MODEL_NOT_INSTALLED",
                                f"{body.model} isn't installed locally. Run: ollama pull {body.model}", 422)
         ollama.model = body.model

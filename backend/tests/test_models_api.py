@@ -42,6 +42,8 @@ def test_lists_only_local_chat_models(client):
     assert [m["name"] for m in d["models"]] == ["gemma4:e2b-it-qat", "qwen3:4b"]
     assert d["current"] == "gemma4:e2b-it-qat" and d["default"] == "gemma4:e2b-it-qat" and d["status"] == "ok"
     assert d["models"][0]["parameters"] == "4.6B"
+    # nothing is silently dropped: hidden models come back with the reason
+    assert d["unavailable"] == [{"name": "glm-5.2:cloud", "reason": "cloud"}, {"name": "nomic-embed-text:latest", "reason": "embedding"}]
 
 
 def test_requires_the_token(client):

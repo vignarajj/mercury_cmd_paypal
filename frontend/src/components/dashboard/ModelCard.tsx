@@ -6,6 +6,75 @@ import type { ModelState } from "../../lib/types";
 import SelectField from "../SelectField";
 import { Badge, Card, Row } from "./SettingsParts";
 
+const REASON: Record<"cloud" | "embedding", string> = {
+  cloud: "Runs on ollama.com, so your text would leave this computer",
+  embedding: "Search model; it can't read a sentence and fill an invoice",
+};
+
+function Unavailable({ items }: { items: ModelState["unavailable"] }) {
+  return (
+    <details className="group px-5 py-3 text-[13px]">
+      <summary className="cursor-pointer select-none font-medium text-ink-dim hover:text-ink">
+        {items.length} other {items.length === 1 ? "model" : "models"} in Ollama can't be used here
+      </summary>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((x) => (
+          <li key={x.name} className="flex items-baseline justify-between gap-4">
+            <span className="font-mono text-[12.5px] text-ink">{x.name}</span>
+            <span className="text-right text-[12px] text-ink-faint">{REASON[x.reason]}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-3">
+      <span aria-hidden className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[12px] font-semibold text-accent">{n}</span>
+      <div className="min-w-0 space-y-1.5">
+        <div className="font-medium text-ink">{title}</div>
+        <div className="space-y-1.5 text-ink-dim">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+/** Step-by-step help for people who have not used Ollama before. Open by default until a model is ready. */
+function OllamaGuide({ state }: { state: ModelState }) {
+  const model = state.default;
+  return (
+    <details open={state.status !== "ok"} className="px-5 py-3 text-[13.5px]">
+      <summary className="cursor-pointer select-none font-medium text-ink-dim hover:text-ink">How to set up Ollama and a local model</summary>
+      <ol className="mt-3 space-y-4">
+        <Step n={1} title="Install Ollama">
+          <p>Download the Mac app from ollama.com/download and open it. Or with Homebrew:</p>
+          <p><Command text="brew install ollama" /></p>
+        </Step>
+        <Step n={2} title="Make sure it is running">
+          <p>The Ollama app shows a llama icon in the menu bar. With Homebrew, start it in Terminal and leave that window open:</p>
+          <p><Command text="ollama serve" /></p>
+        </Step>
+        <Step n={3} title="Download a model (one time)">
+          <p>This is the model Mercury Cmd was tested with. It is about 4.3 GB.</p>
+          <p><Command text={`ollama pull ${model}`} /></p>
+        </Step>
+        <Step n={4} title="Check it worked">
+          <p>The model should appear in this list:</p>
+          <p><Command text="ollama list" /></p>
+          <p>Then press <span className="font-medium text-ink">Check again</span> below. It switches to Ready.</p>
+        </Step>
+      </ol>
+      <div className="mt-4 space-y-1.5 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-ink-dim">
+        <p><span className="font-medium text-ink">Want a different model?</span> Run <span className="font-mono text-ink">ollama pull &lt;name&gt;</span>, press Check again, and choose it above. Any local chat model is listed; embedding and cloud models are not.</p>
+        <p><span className="font-medium text-ink">Ollama on another address?</span> Set <span className="font-mono text-ink">OLLAMA_BASE_URL</span> in <span className="font-mono text-ink">backend/.env</span> and restart the backend. Currently: <span className="font-mono text-ink">{state.base_url ?? "http://localhost:11434"}</span></p>
+        <p><span className="font-medium text-ink">Slow first invoice?</span> The first read after starting can take about 10 seconds while the model loads. Later ones take 2 to 3 seconds.</p>
+      </div>
+    </details>
+  );
+}
+
 const gigabytes = (bytes: number | null) => (bytes ? ` · ${(bytes / 1e9).toFixed(1)} GB` : "");
 
 function Command({ text }: { text: string }) {
@@ -57,8 +126,7 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
   const installed = m?.models ?? [];
   const current = m?.current ?? "";
   const hasCurrent = installed.some((x) => x.name === current);
-  const pull = `ollama pull ${m?.default ?? "gemma4:e2b-it-qat"}`;
-
+  
   return (
     <Card id="ai-model" title="AI model" description="Reads your sentence and fills in the invoice. It runs on this computer through Ollama, so your text never leaves it.">
       {models.error && !m ? (
@@ -96,13 +164,8 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
               Only <span className="font-mono text-ink-dim">{m.default}</span> has been tested against Mercury Cmd's 33 example sentences. Other models work, but check the preview before sending.
             </div>
           )}
-          {m.status !== "ok" && (
-            <ol className="space-y-3 px-5 py-4 text-[13.5px] text-ink-dim">
-              <li><span className="font-medium text-ink">1. Install Ollama</span> from ollama.com/download and open it.</li>
-              <li className="flex flex-wrap items-center gap-2"><span className="font-medium text-ink">2. Download the model</span> in Terminal: <Command text={pull} /></li>
-              <li><span className="font-medium text-ink">3. Come back here</span> and press Check again.</li>
-            </ol>
-          )}
+          {m.unavailable.length > 0 && <Unavailable items={m.unavailable} />}
+          <OllamaGuide state={m} />
           <div className="flex items-center justify-between gap-4 px-5 py-2.5">
             <p className="text-[12px] text-ink-faint">The default comes from OLLAMA_MODEL in backend/.env. Cloud models are hidden to keep your text on this computer.</p>
             <button type="button" onClick={refresh} className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-dim transition hover:bg-surface-2 hover:text-ink">Check again</button>
