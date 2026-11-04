@@ -15,6 +15,7 @@
     "core:window:allow-is-visible",
     "core:event:default",
     "opener:default",
-    "core:window:allow-set-theme"
+    "core:window:allow-set-theme",
+    "core:window:allow-start-dragging"
   ]
 }
