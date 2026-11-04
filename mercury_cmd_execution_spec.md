@@ -266,7 +266,7 @@ IDLE → PARSING → PREVIEW(valid | incomplete) → SENDING → SUCCESS(status 
 
 **Sending:** inputs disabled, stepper `Authenticating → Creating draft → Sending`.
 
-**Success card:** animated check, "Invoice sent to …", invoice ID, total, **status pill** that polls `GET /api/invoice/{id}` every 4 s (stop at PAID/CANCELLED or after 5 min). Buttons: **Copy payment link**, **Open in browser**, **Create another**.
+**Success card:** animated check, "Invoice sent to …", invoice ID, total, **status pill** that polls `GET /api/invoice/{id}` every 4 s for 2 minutes, then every 15 s for up to an hour, stops at a final status, and re-checks immediately when the window regains focus (a hidden window's timers are throttled, and payments often arrive while the user is in the browser). Buttons: **Copy payment link**, **Open in browser**, **Create another**.
 
 **Errors:** friendly inline message from the §3 table, never a raw stack trace. Backend unreachable → "Mercury backend is not running (run `make dev`)".
 

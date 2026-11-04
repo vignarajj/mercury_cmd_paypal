@@ -41,7 +41,7 @@ Real UI, rendered by the app itself (`make shots`). Dark and light themes follow
 | Auth | `POST /v1/oauth2/token` | Cached until near expiry, one lock, one transparent refresh on a 401 |
 | Create draft | `POST /v2/invoicing/invoices` | Money as exact decimals; payment term mapped to `NET_x` / `DUE_ON_RECEIPT` |
 | Send | `POST /v2/invoicing/invoices/{id}/send` | Retried with backoff (PayPal can 404 right after create) |
-| Link + status | `GET /v2/invoicing/invoices/{id}` | `recipient_view_url`; polled every 4 s for `PAID` |
+| Link + status | `GET /v2/invoicing/invoices/{id}` | `recipient_view_url`; polled for `PAID` (every 4 s, then every 15 s for up to an hour, and instantly when you return to the window) |
 
 Real-world quirks found against the live sandbox and handled in code (see `mercury_cmd_execution_spec.md` section 4): create returns a link object, not an `id`; PayPal can answer errors with a misleading top-level name (the truth is in `details[0]`); and sending a local `invoice_date` can make an invoice `SCHEDULED` instead of sent when your calendar day is ahead of the US.
 
@@ -161,7 +161,7 @@ make shots      # regenerate the README screenshots and cover (needs Google Chro
 - macOS only for the desktop app (global shortcuts are unreliable on some Linux setups; Windows is untested).
 - Basic mode handles a single item per invoice.
 - Currencies are limited to USD, EUR, GBP, CAD and AUD (PayPal rejects decimals for zero-decimal currencies such as JPY).
-- Status polling runs while the success card is open and stops after 5 minutes or a final state.
+- Live status runs while the success card is open: every 4 s for 2 minutes, then every 15 s for up to an hour, plus an immediate check whenever the window regains focus. Reopened palettes refresh recent invoices from PayPal.
 
 ## Documentation
 
