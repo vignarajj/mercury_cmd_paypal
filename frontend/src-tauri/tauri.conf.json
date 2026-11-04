@@ -26,10 +26,10 @@
         "center": true,
         "windowEffects": {
           "effects": [
-            "hudWindow"
+            "popover"
           ],
           "state": "active",
-          "radius": 16
+          "radius": 18
         }
       }
     ],

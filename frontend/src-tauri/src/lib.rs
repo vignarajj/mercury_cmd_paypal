@@ -1,20 +1,70 @@
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, WindowEvent,
+};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 const DEFAULT_HOTKEY: &str = "CommandOrControl+Shift+Space";
 
-fn toggle_palette(app: &AppHandle) {
+fn show_palette(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
-        if w.is_visible().unwrap_or(false) {
-            let _ = w.hide();
-        } else {
-            let _ = w.center();
-            let _ = w.show();
-            let _ = w.set_focus();
-            let _ = app.emit("palette:shown", ());
-        }
+        let _ = w.center();
+        let _ = w.show();
+        let _ = w.set_focus();
+        let _ = app.emit("palette:shown", ());
     }
+}
+
+fn toggle_palette(app: &AppHandle) {
+    match app.get_webview_window("main") {
+        Some(w) if w.is_visible().unwrap_or(false) => {
+            let _ = w.hide();
+        }
+        Some(_) => show_palette(app),
+        None => {}
+    }
+}
+
+/// "CommandOrControl+Shift+Space" -> "⌘⇧Space" for the menu label.
+fn pretty_hotkey(hotkey: &str) -> String {
+    hotkey
+        .split('+')
+        .map(|part| match part {
+            "CommandOrControl" | "CmdOrCtrl" | "Command" | "Cmd" | "Super" => "⌘",
+            "Control" | "Ctrl" => "⌃",
+            "Shift" => "⇧",
+            "Alt" | "Option" => "⌥",
+            other => other,
+        })
+        .collect()
+}
+
+/// The app has no Dock icon (accessory policy), so the menu bar is its only visible handle: open and quit live here.
+fn setup_tray(app: &tauri::App, hotkey: &str) -> tauri::Result<()> {
+    let open = MenuItem::with_id(app, "open", format!("Open Mercury Cmd   {}", pretty_hotkey(hotkey)), true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Mercury Cmd", true, Some("Cmd+Q"))?;
+    let menu = Menu::with_items(app, &[&open, &PredefinedMenuItem::separator(app)?, &quit])?;
+
+    TrayIconBuilder::with_id("mercury")
+        .icon(tauri::include_image!("icons/tray.png"))
+        .icon_as_template(true) // monochrome glyph that adapts to light and dark menu bars
+        .tooltip("Mercury Cmd")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_palette(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                toggle_palette(tray.app_handle());
+            }
+        })
+        .build(app)?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -52,6 +102,7 @@ pub fn run() {
                 .parse()
                 .map_err(|e| format!("invalid MERCURY_HOTKEY '{hotkey}': {e}"))?;
             app.global_shortcut().register(shortcut)?;
+            setup_tray(app, &hotkey)?;
             Ok(())
         })
         .run(tauri::generate_context!())
