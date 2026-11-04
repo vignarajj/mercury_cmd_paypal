@@ -259,7 +259,9 @@ IDLE → PARSING → PREVIEW(valid | incomplete) → SENDING → SUCCESS(status 
 | Auto-parse | After 600 ms pause **if** text contains `@` and a digit; cancel in-flight request with `AbortController` on new input |
 | `Cmd+Enter` | Send invoice (only when preview is valid) |
 | `Tab` / `Shift+Tab` | Move across preview fields |
-| `Esc` | Preview open → back to input (keeps text); input has text → clear; input empty → hide |
+| `Esc` | Preview open → back to input (keeps text); after a send → start over and stay open; input has text → clear; input empty → hide |
+| `⌘N` | New invoice from any state except sending |
+| `⌘,` | Open the Dashboard |
 | `Cmd+C` on success | Copy payment link |
 
 **Preview card:** editable email, one row per item (name, qty, amount), currency select, due-terms select, total line, amber "Missing: email. Click to type" badges, warning chips from `warnings`, source badge ("AI" or "Basic mode"). Send button disabled until valid.
@@ -299,3 +301,39 @@ IDLE → PARSING → PREVIEW(valid | incomplete) → SENDING → SUCCESS(status 
 | A10 | Hotkey from another app | Palette appears once, input focused; second press hides |
 | A11 | Fresh clone, README only | A new person gets a working demo in ≤ 10 min (web mode if no Rust) |
 | A12 | Backend stopped | Clear "not running" message |
+
+---
+
+## 10. Dashboard and Desktop Window Behavior
+
+### Why
+The palette is a fixed, borderless, always-on-top window by design. History, invoice detail and settings need a normal window, so the app has two windows that share one frontend: the **palette** (label `main`) and the **Dashboard** (label `dashboard`, route `#/dashboard`).
+
+### Palette flow rules
+- After a successful send the input is **cleared**; typing or pasting starts a new invoice immediately.
+- `Esc` after a send starts over and keeps the palette open; the next `Esc` on an empty input hides it.
+- **Pin** (footer icon, or Settings): the palette does not hide when focus moves elsewhere. Stored locally and mirrored to the native window.
+- The palette is draggable by its top edge and footer. On show it opens near the top of the display under the mouse (unless pinned).
+- If the global hotkey cannot be registered, the app still starts: the menu-bar icon works and the palette shows a notice naming the cause.
+
+### Dashboard window (Tauri)
+- Standard title bar with close, minimize and zoom; resizable; minimum 980 x 600; centered on first open.
+- While it is open the app is a regular app (Dock icon); closing it returns to menu-bar-only.
+- Opened from the tray menu (**Open Dashboard**), the palette footer icon, or `⌘,`. It identifies itself by its native window label, so it does not depend on a URL fragment.
+- Browser mode serves the same screens at `/#/dashboard` and `/#/dashboard/settings`.
+
+### Backend endpoints for the Dashboard
+All require `X-Mercury-Token`.
+
+| Endpoint | Purpose |
+| :--- | :--- |
+| `GET /api/invoices?page=&page_size=&status=&q=` | The merchant's invoices from PayPal (`POST /v2/invoicing/search-invoices`), newest first. `status` is repeatable and validated; an email in `q` is sent to PayPal as `recipient_email`, other text filters the returned page by email, number or id. `page_size` is 1 to 100. Verified against the sandbox |
+| `GET /api/invoice/{id}/detail` | Items with line totals, invoice date, sent time, terms, due date, note, paid and due amounts, and payment transactions |
+| `GET /api/info` | Read-only settings and live health: PayPal status, host and merchant email; AI provider, model and status; backend version. Never includes credentials or the shared token |
+
+### Screens
+- **Invoices:** search and status chips (All, Awaiting payment, Paid, Draft or scheduled, Cancelled or refunded), a list with client, number, date, amount and status, paging, and a detail pane with the Created, Sent, Paid timeline and Copy link, Open and Copy ID actions.
+- **Settings:** theme (System, Light, Dark), shortcut and registration state, pin switch, live connection health with retry, recent invoices stored on this device (with Clear), About, and Quit (desktop).
+
+### Status polling
+The success card polls `GET /api/invoice/{id}` every 4 s for 2 minutes, then every 15 s for up to an hour, stops at a final status, and re-checks immediately when the window regains focus.

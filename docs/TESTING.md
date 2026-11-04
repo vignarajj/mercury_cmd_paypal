@@ -14,11 +14,14 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Area | Tests | What they prove |
 | :--- | :---: | :--- |
 | Backend, PayPal service and API (`test_paypal.py`, `test_api.py`) | 41 | Token caching and refresh, create, send with retry, idempotency, partial-failure retry, error mapping, self-invoice block, CORS, auth token, sandbox-only guard |
+| Backend, history, detail and info (`test_history.py`) | 9 | PayPal search mapped and sorted newest first, status and email filters, text search, input validation, invoice detail with items, dates and payments, `/api/info` health and no secrets |
 | Backend, parsing (`test_parse.py`) | 112 | 33-case corpus through the rule-based parser and through grounding; hallucinated email and amount dropped; fallback when Ollama fails, is slow or returns junk |
-| Frontend logic (`invoice`, `entities`, `recents`) | 42 | Exact money math, validation, request building, entity highlighting, recents store |
-| Frontend accessibility (`a11y.test.tsx`, axe-core) | 6 | No violations on the empty state, preview, missing-email preview and success card; every control has a name; Esc steps back |
+| Frontend logic (`invoice`, `entities`, `recents`, `format`) | 50 | Exact money math, validation, request building, entity highlighting, recents store, history filters and query building, dates and labels |
+| Frontend status polling (`useInvoiceStatus`) | 6 | Polls for an hour with backoff, keeps going past five minutes, re-checks on focus, stops at a final status |
+| Frontend palette flow (`palette.flow.test.tsx`) | 6 | Box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
+| Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 22 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, theme and clearing recents |
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
-| **Total** | **225** | Backend 153, frontend 72, plus a clean TypeScript check |
+| **Total** | **270** | Backend 162, frontend 108, plus a clean TypeScript check |
 
 Related commands: `make eval` (parse corpus against the real model), `make smoke TO=<buyer email>` (real PayPal round trip), `make shots` (regenerate screenshots).
 
@@ -106,9 +109,39 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 36 | No Dock icon | Look at the Dock | App does not appear there | To verify |
 | 37 | Custom hotkey | Set `MERCURY_HOTKEY=Alt+Space` and restart | New shortcut works | To verify |
 
+### Palette flow (after a sent invoice)
+
+| # | Scenario | Try | Expect | Status |
+| :-: | :--- | :--- | :--- | :---: |
+| 38 | Box is ready for the next one | Send an invoice | The input is empty and says "Type to start another invoice" | Automated |
+| 39 | Typing starts a new invoice | Type a new sentence over the success card | The old card fades out and the new sentence is read, no Esc needed | Automated |
+| 40 | Esc starts over | Press `Esc` on the success card | The palette stays open on the empty state; a second `Esc` hides it | Automated, To verify (desktop hide) |
+| 41 | New invoice shortcut | `⌘N` from any state except sending | Back to the empty state, input focused | Automated |
+| 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | To verify (desktop) |
+| 43 | Move it | Drag the top edge or the footer | The window moves | To verify (desktop) |
+| 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | To verify (desktop) |
+| 45 | Hotkey already taken | Set `MERCURY_HOTKEY` to a shortcut another app owns | The app still starts, the menu-bar icon works, a notice explains | To verify (desktop) |
+
+### Dashboard (full window)
+
+Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In the browser use `http://localhost:1420/#/dashboard`.
+
+| # | Scenario | Try | Expect | Status |
+| :-: | :--- | :--- | :--- | :---: |
+| 46 | Real window controls | Open the Dashboard on the desktop | Title bar with close, minimize and zoom; resizable; Dock icon while open | To verify (desktop) |
+| 47 | History from PayPal | Open **Invoices** | Your sandbox invoices, newest first, with amount, status and date | Live (browser) |
+| 48 | Filters and search | Click a status chip; type an email or number | The list narrows; search waits for a pause in typing | Live (API), Automated |
+| 49 | Paging | Use the next and previous arrows | Pages of 10 with the visible range | Automated |
+| 50 | Invoice detail | Click an invoice | Items, totals, paid and balance, dates, terms, payments with transaction ID, timeline | Live (browser) |
+| 51 | Copy and open from detail | "Copy payment link", "Open payer page", "Copy ID" | Link copied; payer page opens | To verify |
+| 52 | Settings health | Open **Settings** | PayPal, AI model and backend status, live | Live (browser) |
+| 53 | Theme control | System, Light, Dark | The whole Dashboard switches and remembers it | Live (browser), Automated |
+| 54 | Backend offline | Stop the backend and open the Dashboard | A clear message and a Try again button | Automated |
+| 55 | Keep palette open, Quit | Settings, Palette and About cards | Switch pins the palette; Quit closes the app | To verify (desktop) |
+
 ## 4. Known gaps
 
 - Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
-- Desktop-only behavior (31 to 37 except the hotkey opening the palette) needs a person at the Mac.
+- Desktop-only behavior (31 to 37 except the hotkey opening the palette, and 40, 42 to 46, 55) needs a person at the Mac.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).

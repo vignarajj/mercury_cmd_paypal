@@ -19,6 +19,8 @@ Real UI, rendered by the app itself (`make shots`). Dark and light themes follow
 | **Describe it**: examples, recent invoices, live entity highlighting | <img src="docs/img/empty-dark.png" width="380" alt="Empty state, dark"> | <img src="docs/img/empty-light.png" width="380" alt="Empty state, light"> |
 | **Review it**: editable preview, checked against your words | <img src="docs/img/preview-dark.png" width="380" alt="Invoice preview, dark"> | <img src="docs/img/preview-light.png" width="380" alt="Invoice preview, light"> |
 | **Track it**: Created, Sent, Paid, live | <img src="docs/img/paid-dark.png" width="380" alt="Payment received, dark"> | <img src="docs/img/paid-light.png" width="380" alt="Payment received, light"> |
+| **Look back**: Dashboard with history and invoice detail | <img src="docs/img/dash-invoices-dark.png" width="380" alt="Dashboard invoices, dark"> | <img src="docs/img/dash-invoices-light.png" width="380" alt="Dashboard invoices, light"> |
+| **Configure**: live health, theme, shortcut | <img src="docs/img/dash-settings-dark.png" width="380" alt="Dashboard settings, dark"> | <img src="docs/img/dash-settings-light.png" width="380" alt="Dashboard settings, light"> |
 
 ---
 
@@ -32,7 +34,9 @@ Real UI, rendered by the app itself (`make shots`). Dark and light themes follow
 - **Safe by construction.** Duplicate submits create one invoice; a failed send keeps the draft and offers *Retry send*; invoicing your own merchant account is blocked before any API call.
 - **You can see what the AI understood.** As you type, the email, amounts and payment terms light up in the input, and the preview fills in field by field.
 - **A real product feel.** Empty state with one-click examples, a recent-invoices list with live status, a Created → Sent → Paid timeline, a PayPal-blue palette in dark and light themes, and a menu-bar icon with Open and Quit.
-- **Accessible.** Keyboard-first (global hotkey, `⌘↵` to send, `Esc` to step back, `⌘C` to copy the link, arrow keys through examples), labelled controls, a `main` landmark, reduced-motion support, and WCAG AA contrast checked by tests in both themes.
+- **A full Dashboard.** A real window (title bar, minimize, zoom, resize) with your whole invoice history from PayPal, status filters and search, a detail view for every invoice (items, totals, dates, payments, transaction ID), and Settings with live PayPal, AI and backend health.
+- **Made for repeat use.** The box clears after a send and typing starts the next invoice, `Esc` starts over without closing, `⌘N` starts a new one, a pin keeps the palette open, and it opens on the screen you are using.
+- **Accessible.** Keyboard-first (global hotkey, `⌘↵` to send, `⌘N` for a new invoice, `⌘,` for the Dashboard, `Esc` to step back, `⌘C` to copy the link, arrow keys through examples), labelled controls, a `main` landmark, reduced-motion support, and WCAG AA contrast checked by tests in both themes.
 
 ## How PayPal is used (PayPal Invoicing API v2, sandbox)
 
@@ -42,6 +46,7 @@ Real UI, rendered by the app itself (`make shots`). Dark and light themes follow
 | Create draft | `POST /v2/invoicing/invoices` | Money as exact decimals; payment term mapped to `NET_x` / `DUE_ON_RECEIPT` |
 | Send | `POST /v2/invoicing/invoices/{id}/send` | Retried with backoff (PayPal can 404 right after create) |
 | Link + status | `GET /v2/invoicing/invoices/{id}` | `recipient_view_url`; polled for `PAID` (every 4 s, then every 15 s for up to an hour, and instantly when you return to the window) |
+| History | `POST /v2/invoicing/search-invoices` | Powers the Dashboard list: status and email filters, newest first |
 
 Real-world quirks found against the live sandbox and handled in code (see `mercury_cmd_execution_spec.md` section 4): create returns a link object, not an `id`; PayPal can answer errors with a misleading top-level name (the truth is in `details[0]`); and sending a local `invoice_date` can make an invoice `SCHEDULED` instead of sent when your calendar day is ahead of the US.
 
@@ -106,6 +111,7 @@ Press **⌘⇧Space** from any app to open the palette (change it with `MERCURY_
 2. Check the preview, edit anything, press **⌘↵**.
 3. Click **Open**, log in at the payer page as the sandbox **Personal** account, and pay.
 4. Watch the palette's status pill change to **Paid** within a few seconds.
+5. Open the **Dashboard** (footer icon, `⌘,`, or the menu-bar icon) to see all your invoices, open one for its full detail, and check the live connection status in Settings.
 
 Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round trip without the UI.
 
@@ -125,6 +131,8 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 │  /api/parse   → Ollama (JSON schema) → grounding     │
 │                 └→ regex parser when the model fails │
 │  /api/invoice → PayPal create → send → link/status   │
+│  /api/invoices, /api/invoice/{id}/detail → history   │
+│  /api/info → live health for Settings                │
 └───────────────┬───────────────────────┬──────────────┘
                 │                       │
         Ollama (local)          PayPal Sandbox REST API
@@ -138,6 +146,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 | `backend/app/services/regex_parser.py` | Deterministic fallback parser |
 | `frontend/src/hooks/usePalette.ts` | The palette state machine |
 | `frontend/src/components/` | Palette, entity-highlighting input, preview card, success card with live status, recents |
+| `frontend/src/components/dashboard/` | The Dashboard window: invoices, invoice detail, settings |
 | `frontend/src/index.css` | Theme tokens (dark and light) as CSS variables |
 | `frontend/src-tauri/src/lib.rs` | Hotkey, window show/hide, blur handling |
 | `scripts/` | `setup.sh`, `dev.sh`, `paypal_smoke.py`, `eval_parser.py` |
@@ -145,7 +154,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 ## Tests
 
 ```bash
-make test       # 153 backend tests (mocked PayPal and Ollama) + 72 frontend tests (logic, axe accessibility, WCAG contrast) + type check
+make test       # 162 backend tests (mocked PayPal and Ollama) + 108 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
 make shots      # regenerate the README screenshots and cover (needs Google Chrome)
@@ -160,6 +169,7 @@ make shots      # regenerate the README screenshots and cover (needs Google Chro
 ## Known limitations
 - macOS only for the desktop app (global shortcuts are unreliable on some Linux setups; Windows is untested).
 - Basic mode handles a single item per invoice.
+- The Dashboard shows and opens invoices; cancelling or reminding from the app is not included yet.
 - Currencies are limited to USD, EUR, GBP, CAD and AUD (PayPal rejects decimals for zero-decimal currencies such as JPY).
 - Live status runs while the success card is open: every 4 s for 2 minutes, then every 15 s for up to an hour, plus an immediate check whenever the window regains focus. Reopened palettes refresh recent invoices from PayPal.
 
