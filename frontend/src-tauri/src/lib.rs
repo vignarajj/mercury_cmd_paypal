@@ -167,6 +167,21 @@ fn setup_tray(app: &tauri::App, hotkey: &str) -> tauri::Result<()> {
     Ok(())
 }
 
+/// `tauri dev` runs a bare binary, not an .app bundle, so macOS shows the generic "exec" icon in the Dock.
+/// Setting the application icon at runtime makes the dev build look like the packaged app (which uses icon.icns).
+#[cfg(target_os = "macos")]
+fn set_dock_icon() {
+    use objc2::{AnyThread, MainThreadMarker};
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let data = NSData::with_bytes(include_bytes!("../icons/icon.png"));
+    if let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) {
+        unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image)) };
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let hotkey = std::env::var("MERCURY_HOTKEY").unwrap_or_else(|_| DEFAULT_HOTKEY.into());
@@ -205,7 +220,10 @@ pub fn run() {
         })
         .setup(move |app| {
             #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                set_dock_icon();
+            }
 
             // A taken or invalid hotkey must not stop the app: the menu-bar icon still works, and the UI says why.
             let registered = match hotkey.parse::<Shortcut>() {

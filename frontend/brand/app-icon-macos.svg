@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- macOS app icon: the artwork sits in an 824 px body with a transparent margin and a soft shadow, like the system icons. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#009CDE"/><stop offset="1" stop-color="#003087"/></linearGradient>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#FFC439"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#001a4d" flood-opacity=".38"/></filter>
+  </defs>
+  <g transform="translate(100 100) scale(0.8047)">
+    <rect width="1024" height="1024" rx="228" fill="url(#g)" filter="url(#shadow)"/>
+    <rect x="152" y="352" width="720" height="320" rx="104" fill="#fff" fill-opacity=".14" stroke="#fff" stroke-opacity=".6" stroke-width="16"/>
+    <path d="M326 424C336 492 352 508 420 520C352 532 336 548 326 616C316 548 300 532 232 520C300 508 316 492 326 424Z" fill="url(#s)"/>
+    <rect x="500" y="474" width="268" height="24" rx="12" fill="#fff" fill-opacity=".92"/>
+    <rect x="500" y="540" width="172" height="24" rx="12" fill="#fff" fill-opacity=".52"/>
+  </g>
+</svg>
