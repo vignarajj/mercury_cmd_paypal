@@ -74,7 +74,11 @@ fn open_dashboard_window(app: &AppHandle) {
         let _ = main.hide();
     }
     #[cfg(target_os = "macos")]
-    let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+    {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+        // The Dock tile is created when the app becomes a regular app, so the icon has to be set after this point.
+        let _ = app.run_on_main_thread(set_dock_icon);
+    }
 
     if let Some(w) = app.get_webview_window("dashboard") {
         let _ = w.unminimize();
