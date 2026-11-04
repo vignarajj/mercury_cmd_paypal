@@ -1,0 +1,613 @@
+[
+ {
+  "id": "c01",
+  "text": "Bill client@corp.com $750 for Frontend React Development",
+  "regex": true,
+  "expect": {
+   "email": "client@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "frontend react development",
+     "750.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c02",
+  "text": "Invoice sarah@acme.co $1,200 for brand refresh, net 30",
+  "regex": true,
+  "expect": {
+   "email": "sarah@acme.co",
+   "currency": "USD",
+   "due_days": 30,
+   "items": [
+    [
+     "brand refresh",
+     "1200.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c03",
+  "text": "send a bill to personal-buyer@example.com for $350.00 for Design Sprint",
+  "regex": true,
+  "expect": {
+   "email": "personal-buyer@example.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "design sprint",
+     "350.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c04",
+  "text": "Charge mike@studio.io €500 for logo design",
+  "regex": true,
+  "expect": {
+   "email": "mike@studio.io",
+   "currency": "EUR",
+   "due_days": null,
+   "items": [
+    [
+     "logo design",
+     "500.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c05",
+  "text": "invoice jane@x.org £90 for consulting due on receipt",
+  "regex": true,
+  "expect": {
+   "email": "jane@x.org",
+   "currency": "GBP",
+   "due_days": 0,
+   "items": [
+    [
+     "consulting",
+     "90.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c06",
+  "text": "bill dev@startup.com 2k for landing page",
+  "regex": true,
+  "expect": {
+   "email": "dev@startup.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "landing page",
+     "2000.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c07",
+  "text": "bill dev@startup.com $1.5k for api work net 15",
+  "regex": true,
+  "expect": {
+   "email": "dev@startup.com",
+   "currency": "USD",
+   "due_days": 15,
+   "items": [
+    [
+     "api work",
+     "1500.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c08",
+  "text": "Invoice amy@corp.com 350 for design sprint 2",
+  "regex": true,
+  "expect": {
+   "email": "amy@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "design sprint 2",
+     "350.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c09",
+  "text": "bill client2@corp.com $400 for audit",
+  "regex": true,
+  "expect": {
+   "email": "client2@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "audit",
+     "400.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c10",
+  "text": "Bill client@corp.com $100 for hosting.",
+  "regex": true,
+  "expect": {
+   "email": "client@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "hosting",
+     "100.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c11",
+  "text": "BILL ACME@CORP.COM $500 FOR LOGO DESIGN",
+  "regex": true,
+  "expect": {
+   "email": "acme@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "logo design",
+     "500.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c12",
+  "text": "invoice $500 for logo design",
+  "regex": true,
+  "expect": {
+   "email": null,
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "logo design",
+     "500.00"
+    ]
+   ],
+   "missing": [
+    "client_email"
+   ]
+  }
+ },
+ {
+  "id": "c13",
+  "text": "bill sarah@acme.co for logo design",
+  "regex": true,
+  "expect": {
+   "email": "sarah@acme.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [],
+   "missing": [
+    "items"
+   ]
+  }
+ },
+ {
+  "id": "c14",
+  "text": "make an invoice",
+  "regex": true,
+  "expect": {
+   "email": null,
+   "currency": "USD",
+   "due_days": null,
+   "items": [],
+   "missing": [
+    "client_email",
+    "items"
+   ]
+  }
+ },
+ {
+  "id": "c15",
+  "text": "bill a@b.co $99.99 for plugin license",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "plugin license",
+     "99.99"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c16",
+  "text": "bill a@b.co 450 USD for seo audit",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "seo audit",
+     "450.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c17",
+  "text": "bill a@b.co EUR 800 for translation",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "EUR",
+   "due_days": null,
+   "items": [
+    [
+     "translation",
+     "800.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c18",
+  "text": "bill a@b.co 300 CAD for photos",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "CAD",
+   "due_days": null,
+   "items": [
+    [
+     "photos",
+     "300.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c19",
+  "text": "bill a@b.co $600 for retainer net30",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 30,
+   "items": [
+    [
+     "retainer",
+     "600.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c20",
+  "text": "bill a@b.co $600 for retainer, due in 15 days",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 15,
+   "items": [
+    [
+     "retainer",
+     "600.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c21",
+  "text": "bill a@b.co $600 for retainer due within 2 weeks",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 14,
+   "items": [
+    [
+     "retainer",
+     "600.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c22",
+  "text": "bill a@b.co $12,500 for app development",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "app development",
+     "12500.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c23",
+  "text": "Please invoice a@b.co $75 for a logo tweak",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "logo tweak",
+     "75.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c24",
+  "text": "a@b.co $80 website fix",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "website fix",
+     "80.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c25",
+  "text": "invoice a@b.co $120 social media posts",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "social media posts",
+     "120.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c26",
+  "text": "bill a@b.co $2,000,000 for yacht",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [],
+   "missing": [
+    "items"
+   ]
+  }
+ },
+ {
+  "id": "c27",
+  "text": "bill a@b.co $0 for free trial",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [],
+   "missing": [
+    "items"
+   ]
+  }
+ },
+ {
+  "id": "c28",
+  "text": "Bill client@corp.com for $350 for design",
+  "regex": true,
+  "expect": {
+   "email": "client@corp.com",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "design",
+     "350.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c29",
+  "text": "invoice a@b.co $1,000 for consulting, net 60",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 60,
+   "items": [
+    [
+     "consulting",
+     "1000.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "c30",
+  "text": "invoice a@b.co $45 for stickers net 7",
+  "regex": true,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 7,
+   "items": [
+    [
+     "stickers",
+     "45.00"
+    ]
+   ],
+   "missing": []
+  }
+ },
+ {
+  "id": "m01",
+  "text": "Bill sarah@acme.co $1,200 for brand refresh and $300 for icons, net 15",
+  "regex": false,
+  "expect": {
+   "email": "sarah@acme.co",
+   "currency": "USD",
+   "due_days": 15,
+   "items": [
+    [
+     "brand refresh",
+     "1200.00"
+    ],
+    [
+     "icons",
+     "300.00"
+    ]
+   ],
+   "missing": []
+  },
+  "mock_llm": {
+   "client_email": "sarah@acme.co",
+   "currency": "USD",
+   "due_days": 15,
+   "items": [
+    {
+     "name": "Brand refresh",
+     "quantity": 1,
+     "unit_amount": "1200.00"
+    },
+    {
+     "name": "Icons",
+     "quantity": 1,
+     "unit_amount": "300.00"
+    }
+   ]
+  }
+ },
+ {
+  "id": "m02",
+  "text": "invoice a@b.co: logo $400, website $1500, hosting $200 net 30",
+  "regex": false,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": 30,
+   "items": [
+    [
+     "logo",
+     "400.00"
+    ],
+    [
+     "website",
+     "1500.00"
+    ],
+    [
+     "hosting",
+     "200.00"
+    ]
+   ],
+   "missing": []
+  },
+  "mock_llm": {
+   "client_email": "a@b.co",
+   "currency": "USD",
+   "due_days": 30,
+   "items": [
+    {
+     "name": "Logo",
+     "unit_amount": "400.00"
+    },
+    {
+     "name": "Website",
+     "unit_amount": "1500.00"
+    },
+    {
+     "name": "Hosting",
+     "unit_amount": "200.00"
+    }
+   ]
+  }
+ },
+ {
+  "id": "m03",
+  "text": "bill a@b.co 3 hours of consulting at $100 per hour",
+  "regex": false,
+  "expect": {
+   "email": "a@b.co",
+   "currency": "USD",
+   "due_days": null,
+   "items": [
+    [
+     "consulting (hours)",
+     "100.00",
+     3
+    ]
+   ],
+   "missing": []
+  },
+  "mock_llm": {
+   "client_email": "a@b.co",
+   "items": [
+    {
+     "name": "Consulting (hours)",
+     "quantity": 3,
+     "unit_amount": "100.00"
+    }
+   ]
+  }
+ }
+]
