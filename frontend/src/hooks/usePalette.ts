@@ -70,8 +70,8 @@ function toUiError(e: unknown): UiError {
 
 const newId = () => crypto.randomUUID();
 
-export function usePalette() {
-  const [state, dispatch] = useReducer(reducer, initial);
+export function usePalette(seed?: Partial<State>) {
+  const [state, dispatch] = useReducer(reducer, { ...initial, ...seed });
   const stateRef = useRef(state);
   stateRef.current = state;
   const abortRef = useRef<AbortController | null>(null);

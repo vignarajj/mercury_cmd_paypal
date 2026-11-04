@@ -1,46 +1,171 @@
 @import "tailwindcss";
 
-@theme {
-  --color-accent: #6ea2ff;
-  --color-ok: #3ddc97;
-  --color-warn: #ffb454;
-  --color-bad: #ff7b7b;
+/* Colors resolve through CSS variables, so the whole UI switches theme by changing :root only. */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-cta: var(--cta);
+  --color-cta-ink: var(--cta-ink);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-hl-email: var(--hl-email);
+  --color-hl-amount: var(--hl-amount);
+  --color-hl-term: var(--hl-term);
+  --color-hl-cur: var(--hl-cur);
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+/* PayPal-inspired palette: navy #003087, blue #0070E0, sky #009CDE, gold #FFC439. Dark is the default. */
+:root {
+  color-scheme: dark;
+  --glass: rgba(9, 21, 50, 0.60);
+  --glass-edge: rgba(255, 255, 255, 0.16);
+  --shadow: 0 28px 90px rgba(0, 8, 30, 0.6);
+  --ink: #f4f7ff;
+  --ink-dim: #bcc8e6;
+  --ink-faint: #97a5ca;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.11);
+  --line: rgba(255, 255, 255, 0.13);
+  --accent: #6cb2ff;
+  --accent-ink: #04122e;
+  --cta: #ffc439;
+  --cta-ink: #0a1f4d;
+  --ok: #4ae3a0;
+  --warn: #ffb74d;
+  --bad: #ff8a8a;
+  --hl-email: #7cc0ff;
+  --hl-amount: #5ce6aa;
+  --hl-term: #ffc439;
+  --hl-cur: #c2b3ff;
+  --page-bg: radial-gradient(1100px 560px at 15% -10%, #123a8f 0%, transparent 60%), radial-gradient(900px 520px at 95% 0%, #0a5fb8 0%, transparent 55%), #061232;
+}
+
+:root[data-theme="dark"] { color-scheme: dark; }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --glass: rgba(247, 250, 255, 0.80);
+    --glass-edge: rgba(0, 48, 135, 0.18);
+    --shadow: 0 24px 70px rgba(0, 48, 135, 0.22);
+    --ink: #0b1b3f;
+    --ink-dim: #41507a;
+    --ink-faint: #5b6a92;
+    --surface: rgba(0, 48, 135, 0.05);
+    --surface-2: rgba(0, 48, 135, 0.10);
+    --line: rgba(0, 48, 135, 0.16);
+    --accent: #005ab8;
+    --accent-ink: #ffffff;
+    --cta: #ffc439;
+    --cta-ink: #0b1b3f;
+    --ok: #086b47;
+    --warn: #8f5200;
+    --bad: #b3261e;
+    --hl-email: #0057b8;
+    --hl-amount: #086b47;
+    --hl-term: #8f5200;
+    --hl-cur: #5a3ec2;
+    --page-bg: radial-gradient(1100px 560px at 15% -10%, #cfe3ff 0%, transparent 60%), radial-gradient(900px 520px at 95% 0%, #e3f1ff 0%, transparent 55%), #eef3fc;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --glass: rgba(247, 250, 255, 0.80);
+  --glass-edge: rgba(0, 48, 135, 0.18);
+  --shadow: 0 24px 70px rgba(0, 48, 135, 0.22);
+  --ink: #0b1b3f;
+  --ink-dim: #41507a;
+  --ink-faint: #5b6a92;
+  --surface: rgba(0, 48, 135, 0.05);
+  --surface-2: rgba(0, 48, 135, 0.10);
+  --line: rgba(0, 48, 135, 0.16);
+  --accent: #005ab8;
+  --accent-ink: #ffffff;
+  --cta: #ffc439;
+  --cta-ink: #0b1b3f;
+  --ok: #086b47;
+  --warn: #8f5200;
+  --bad: #b3261e;
+  --hl-email: #0057b8;
+  --hl-amount: #086b47;
+  --hl-term: #8f5200;
+  --hl-cur: #5a3ec2;
+  --page-bg: radial-gradient(1100px 560px at 15% -10%, #cfe3ff 0%, transparent 60%), radial-gradient(900px 520px at 95% 0%, #e3f1ff 0%, transparent 55%), #eef3fc;
+}
+
+@layer base {
 html, body, #root { margin: 0; height: 100%; background: transparent; }
-body { font-family: var(--font-sans); color: #f5f5f7; -webkit-font-smoothing: antialiased; user-select: none; }
+body { font-family: var(--font-sans); color: var(--ink); -webkit-font-smoothing: antialiased; user-select: none; }
 input, select, button { font: inherit; color: inherit; }
-input, select { color-scheme: dark; user-select: text; }
-
-/* Desktop: the native hudWindow vibrancy supplies the blur; this layer only tints and outlines it. */
-.glass {
-  background: rgba(20, 22, 28, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 16px;
-  overflow: hidden;
+input, select { user-select: text; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
 }
-
-/* Web mode (no native window): fake the surface so the palette is visible and still looks like glass. */
-html.web body {
-  min-height: 100vh;
-  background: radial-gradient(1200px 600px at 20% -10%, #25304a 0%, transparent 60%), radial-gradient(900px 500px at 90% 10%, #3a2a4d 0%, transparent 55%), #0d0f14;
-}
-html.web #root { height: auto; padding: 12vh 16px 24px; display: flex; justify-content: center; }
-html.web .glass { background: rgba(24, 26, 33, 0.72); backdrop-filter: blur(28px) saturate(140%); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55); }
 
 @keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
-.shimmer {
-  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
-  background-size: 600px 100%;
-  animation: shimmer 1.2s linear infinite;
+
+@layer components {
+/* Desktop: native vibrancy supplies the blur; this layer tints and outlines it. */
+.glass {
+  position: relative;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
+
+/* Web mode has no native window, so paint a backdrop and fake the glass. */
+html.web body { min-height: 100vh; background: var(--page-bg); }
+html.web #root { height: auto; padding: 11vh 16px 24px; display: flex; justify-content: center; }
+html.web.shot #root { padding: 28px 40px; }
+html.web .glass { backdrop-filter: blur(30px) saturate(150%); box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+
 .field {
-  width: 100%; border-radius: 10px; padding: 7px 10px; font-size: 14px; outline: none;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  width: 100%; border-radius: 10px; padding: 8px 11px; font-size: 14px; outline: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line);
+  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
 }
-.field:focus { border-color: var(--color-accent); background: rgba(255,255,255,0.09); }
-.field[aria-invalid="true"] { border-color: var(--color-warn); }
-.field:disabled { opacity: 0.55; }
-.kbd { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.10); }
+.field::placeholder { color: var(--ink-faint); }
+.field:hover:not(:disabled) { background: var(--surface-2); }
+.field:focus { border-color: var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 26%, transparent); }
+.field[aria-invalid="true"] { border-color: var(--warn); }
+.field:disabled { opacity: 0.6; }
+
+:where(button, select, a, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+.kbd { font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 6px; background: var(--surface-2); color: var(--ink-dim); border: 1px solid var(--line); }
+
+.shimmer {
+  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+  background-size: 600px 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+/* Input mirror: tokens are colored underneath a transparent <input> so the caret and selection stay native. */
+.mirror, .entry { font-size: 18px; line-height: 28px; letter-spacing: 0; padding: 0; margin: 0; border: 0; font-family: var(--font-sans); white-space: pre; }
+.mirror { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: var(--ink); }
+.entry { position: relative; width: 100%; background: transparent; outline: none; color: transparent; caret-color: var(--ink); -webkit-text-fill-color: transparent; }
+.entry::placeholder { color: var(--ink-faint); -webkit-text-fill-color: var(--ink-faint); }
+.entry::selection { background: color-mix(in oklab, var(--accent) 35%, transparent); }
+.hl { border-radius: 5px; padding: 1px 0; box-shadow: 0 0 0 3px transparent; transition: background 0.15s; }
+.hl-email { color: var(--hl-email); background: color-mix(in oklab, var(--hl-email) 14%, transparent); }
+.hl-amount { color: var(--hl-amount); background: color-mix(in oklab, var(--hl-amount) 14%, transparent); }
+.hl-term { color: var(--hl-term); background: color-mix(in oklab, var(--hl-term) 16%, transparent); }
+.hl-currency { color: var(--hl-cur); background: color-mix(in oklab, var(--hl-cur) 14%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer { animation: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

@@ -50,3 +50,10 @@ export async function copyText(text: string): Promise<boolean> {
     return ok;
   }
 }
+
+/** Tell the native window which appearance to use so vibrancy matches (null = follow the system). */
+export async function setNativeTheme(theme: "light" | "dark" | null) {
+  if (!isTauri) return;
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  await getCurrentWindow().setTheme(theme);
+}

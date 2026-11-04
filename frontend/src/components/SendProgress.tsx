@@ -11,10 +11,10 @@ export default function SendProgress() {
     return () => timers.forEach(clearTimeout);
   }, []);
   return (
-    <ol className="flex items-center gap-4 text-[13px]" aria-live="polite">
+    <ol className="flex items-center gap-3.5 text-[13px]" aria-live="polite">
       {STEPS.map((label, i) => (
-        <li key={label} className={`flex items-center gap-1.5 ${i <= step ? "text-white" : "text-white/35"}`}>
-          {i < step ? <Check size={14} className="text-ok" /> : i === step ? <Loader2 size={14} className="animate-spin text-accent" /> : <span className="size-3.5 rounded-full border border-white/20" />}
+        <li key={label} className={`flex items-center gap-1.5 ${i <= step ? "text-ink" : "text-ink-faint"}`}>
+          {i < step ? <Check size={14} className="text-ok" aria-hidden /> : i === step ? <Loader2 size={14} className="animate-spin text-accent" aria-hidden /> : <span aria-hidden className="size-3.5 rounded-full border border-line" />}
           {label}
         </li>
       ))}

@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Check, CornerDownLeft, Loader2, Sparkles, X } from "lucide-react";
-import { usePalette } from "../hooks/usePalette";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AlertTriangle, Check, CornerDownLeft, Loader2, Monitor, Moon, Sun, X } from "lucide-react";
+import { usePalette, type State } from "../hooks/usePalette";
+import { useRecents } from "../hooks/useRecents";
+import { useTheme } from "../hooks/useTheme";
 import { copyText, hideWindow, isTauri, onPaletteShown, setWindowHeight } from "../lib/tauri";
+import EmptyState from "./EmptyState";
+import HighlightedInput from "./HighlightedInput";
 import InvoicePreviewCard from "./InvoicePreviewCard";
 import InvoiceSuccessCard from "./InvoiceSuccessCard";
 
 const STALE_MS = 60_000;
+const THEME_ICON = { system: Monitor, light: Sun, dark: Moon } as const;
+const THEME_NEXT = { system: "light", light: "dark", dark: "system" } as const;
 
-export default function CommandPalette() {
-  const p = usePalette();
+export default function CommandPalette({ initial }: { initial?: Partial<State> } = {}) {
+  const p = usePalette(initial);
   const { state } = p;
+  const theme = useTheme();
+  const recents = useRecents();
   const stateRef = useRef(state);
   stateRef.current = state;
   const input = useRef<HTMLInputElement>(null);
@@ -48,18 +56,25 @@ export default function CommandPalette() {
     return () => window.removeEventListener("keydown", onKey);
   }, [escape, copyLink, p]);
 
-  // Hotkey show: refocus the input; drop an abandoned draft after 60 s hidden (never a sent invoice).
+  // A sent invoice joins the recents list.
+  useEffect(() => { if (state.result) recents.add(state.result); }, [state.result, recents.add]);
+
+  // Hotkey show: refocus, refresh statuses, drop an abandoned draft after 60 s hidden (never a sent invoice).
   useEffect(() => {
     input.current?.focus();
+    void recents.refresh();
     const onBlur = () => { hiddenAt.current = Date.now(); };
+    const onFocus = () => void recents.refresh();
     window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
     let unlisten = () => {};
     void onPaletteShown(() => {
       const { phase } = stateRef.current;
       if (hiddenAt.current && Date.now() - hiddenAt.current > STALE_MS && (phase === "idle" || phase === "preview")) p.reset();
       input.current?.focus();
+      void recents.refresh();
     }).then((f) => { unlisten = f; });
-    return () => { window.removeEventListener("blur", onBlur); unlisten(); };
+    return () => { window.removeEventListener("blur", onBlur); window.removeEventListener("focus", onFocus); unlisten(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,71 +89,90 @@ export default function CommandPalette() {
 
   const busy = state.phase === "parsing" || state.phase === "sending";
   const showCard = state.phase === "preview" || state.phase === "sending";
+  const showEmpty = state.phase === "idle" && !state.text.trim() && !state.error;
+  const ThemeIcon = THEME_ICON[theme.mode];
 
   return (
-    <div ref={root} className="glass w-full max-w-[680px]">
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        <span className="grid size-6 place-items-center text-white/60" aria-hidden>
-          {busy ? <Loader2 size={20} className="animate-spin text-accent" /> : state.phase === "success" ? <Check size={20} className="text-ok" /> : <Sparkles size={20} />}
-        </span>
-        <input
-          ref={input} autoFocus spellCheck={false} autoComplete="off"
-          value={state.text} disabled={state.phase === "sending"}
-          onChange={(e) => p.setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); void p.parse(state.text); } }}
-          placeholder="Try: Bill client@acme.co $500 for logo design, net 15"
-          aria-label="Describe the invoice"
-          className="min-w-0 flex-1 bg-transparent text-[18px] outline-none placeholder:text-white/35"
-        />
-        {state.text && state.phase !== "sending" && (
-          <button type="button" aria-label="Clear" onClick={() => { p.back(); p.setText(""); input.current?.focus(); }}
-            className="grid size-6 place-items-center rounded-md text-white/40 hover:bg-white/10 hover:text-white"><X size={15} /></button>
-        )}
-      </div>
-
-      {state.phase === "parsing" && (
-        <div className="space-y-2 border-t border-white/10 px-4 pb-4 pt-3" aria-label="Reading your request">
-          <div className="shimmer h-4 w-1/3 rounded" /><div className="shimmer h-9 rounded-lg" /><div className="shimmer h-9 rounded-lg" />
+    <MotionConfig reducedMotion="user">
+      <main ref={root} aria-label="Mercury Cmd" className="glass w-full max-w-[680px]">
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <span className="grid size-7 shrink-0 place-items-center" aria-hidden>
+            {busy ? <Loader2 size={22} className="animate-spin text-accent" />
+              : state.phase === "success" ? <Check size={22} className="text-ok" />
+              : <img src="/mercury.svg" alt="" className="size-7 drop-shadow-sm" draggable={false} />}
+          </span>
+          <HighlightedInput
+            ref={input} autoFocus spellCheck={false} autoComplete="off" autoCapitalize="off"
+            value={state.text} disabled={state.phase === "sending"}
+            onChange={(e) => p.setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); void p.parse(state.text); }
+              if (e.key === "ArrowDown" && showEmpty) { e.preventDefault(); document.querySelector<HTMLElement>("[data-nav]")?.focus(); }
+            }}
+            placeholder="Describe an invoice, e.g. Bill client@acme.co $500 for logo design, net 15"
+            aria-label="Describe the invoice"
+          />
+          {state.text && state.phase !== "sending" && (
+            <button type="button" aria-label="Clear" onClick={() => { p.back(); p.setText(""); input.current?.focus(); }}
+              className="grid size-6 shrink-0 place-items-center rounded-md text-ink-faint transition hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
+          )}
         </div>
-      )}
 
-      <AnimatePresence mode="wait" initial={false}>
-        {showCard && state.draft && (
-          <InvoicePreviewCard key="preview" draft={state.draft} source={state.source} warnings={state.warnings}
-            showErrors={state.showErrors} sending={state.phase === "sending"} retryMode={!!state.failedInvoiceId}
-            onChange={p.edit} onSend={() => void p.send()} />
+        {state.phase === "parsing" && (
+          <div className="space-y-2 border-t border-line px-4 pb-4 pt-3.5" role="status" aria-label="Reading your request">
+            <div className="shimmer h-4 w-1/3 rounded" /><div className="shimmer h-10 rounded-lg" /><div className="shimmer h-10 rounded-lg" />
+          </div>
         )}
-        {state.phase === "success" && state.result && (
-          <InvoiceSuccessCard key="success" result={state.result} copied={copied} onCopy={() => void copyLink()}
-            onAnother={() => { p.reset(); input.current?.focus(); }} />
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {state.error && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            role="alert" className="overflow-hidden border-t border-white/10">
-            <div className="flex items-start gap-2 bg-bad/10 px-4 py-2.5 text-[13px] text-bad">
-              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-              <span className="flex-1">{state.error.message}</span>
-              <button type="button" aria-label="Dismiss" onClick={() => p.dispatch({ type: "dismissError" })} className="text-bad/70 hover:text-bad"><X size={14} /></button>
-            </div>
-          </motion.div>
+        {showEmpty && (
+          <EmptyState recents={recents.recents}
+            onExample={(t) => { p.setText(t); void p.parse(t); input.current?.focus(); }}
+            onLeaveUp={() => input.current?.focus()} />
         )}
-      </AnimatePresence>
 
-      <footer className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-[11.5px] text-white/45">
-        <span className="flex items-center gap-3">
-          {state.phase === "success" ? (<><Hint k="⌘C" t="copy link" /><Hint k="esc" t="done" /></>)
-            : showCard ? (<><Hint k="⌘↵" t="send" /><Hint k="tab" t="next field" /><Hint k="esc" t="back" /></>)
-            : (<><Hint k="↵" t="read" icon /><Hint k="esc" t={state.text ? "clear" : "close"} /></>)}
-        </span>
-        <span className="rounded-full bg-white/8 px-2 py-0.5 tracking-wide text-white/55" title="No real money moves. All PayPal calls use the sandbox.">SANDBOX</span>
-      </footer>
-    </div>
+        <AnimatePresence mode="wait" initial={false}>
+          {showCard && state.draft && (
+            <InvoicePreviewCard key="preview" draft={state.draft} source={state.source} warnings={state.warnings}
+              showErrors={state.showErrors} sending={state.phase === "sending"} retryMode={!!state.failedInvoiceId}
+              onChange={p.edit} onSend={() => void p.send()} />
+          )}
+          {state.phase === "success" && state.result && (
+            <InvoiceSuccessCard key="success" result={state.result} copied={copied} onCopy={() => void copyLink()}
+              onAnother={() => { p.reset(); input.current?.focus(); }} onStatus={recents.setStatus} />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {state.error && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              role="alert" className="overflow-hidden border-t border-line">
+              <div className="flex items-start gap-2 bg-bad/10 px-4 py-2.5 text-[13px] text-bad">
+                <AlertTriangle size={15} aria-hidden className="mt-0.5 shrink-0" />
+                <span className="flex-1">{state.error.message}</span>
+                <button type="button" aria-label="Dismiss" onClick={() => p.dispatch({ type: "dismissError" })} className="text-bad/80 hover:text-bad"><X size={14} /></button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <footer className="flex items-center justify-between border-t border-line px-4 py-2 text-[12px] text-ink-faint">
+          <span className="flex items-center gap-3.5">
+            {state.phase === "success" ? (<><Hint k="⌘C" t="copy link" /><Hint k="esc" t="done" /></>)
+              : showCard ? (<><Hint k="⌘↵" t="send" /><Hint k="tab" t="next field" /><Hint k="esc" t="back" /></>)
+              : showEmpty ? (<><Hint k="↵" t="read" icon /><Hint k="↓" t="examples" /><Hint k="esc" t="close" /></>)
+              : (<><Hint k="↵" t="read" icon /><Hint k="esc" t={state.text ? "clear" : "close"} /></>)}
+          </span>
+          <span className="flex items-center gap-2">
+            <button type="button" onClick={theme.cycle} title={`Theme: ${theme.mode}. Click for ${THEME_NEXT[theme.mode]}.`} aria-label={`Theme: ${theme.mode}. Switch to ${THEME_NEXT[theme.mode]}`}
+              className="grid size-6 place-items-center rounded-md text-ink-dim transition hover:bg-surface-2 hover:text-ink"><ThemeIcon size={14} aria-hidden /></button>
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium tracking-wider text-ink-dim" title="No real money moves. All PayPal calls use the sandbox.">SANDBOX</span>
+          </span>
+        </footer>
+      </main>
+    </MotionConfig>
   );
 }
 
 function Hint({ k, t, icon }: { k: string; t: string; icon?: boolean }) {
-  return <span className="flex items-center gap-1.5"><span className="kbd">{icon ? <CornerDownLeft size={10} className="inline" /> : k}</span>{t}</span>;
+  return <span className="flex items-center gap-1.5"><span className="kbd">{icon ? <CornerDownLeft size={10} className="inline" aria-hidden /> : k}</span>{t}</span>;
 }
