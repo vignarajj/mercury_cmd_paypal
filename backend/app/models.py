@@ -119,3 +119,57 @@ class ParsedInvoice(BaseModel):
         self.missing_fields = [f for f, ok in (("client_email", self.client_email), ("items", self.items)) if not ok]
         self.is_complete = not self.missing_fields
         return self
+
+
+# ---------------------------------------------------------- history and detail
+
+LIST_STATUSES = (
+    "DRAFT", "SENT", "SCHEDULED", "PAID", "MARKED_AS_PAID", "CANCELLED", "REFUNDED",
+    "PARTIALLY_PAID", "PARTIALLY_REFUNDED", "MARKED_AS_REFUNDED", "UNPAID", "PAYMENT_PENDING",
+)
+
+
+class InvoiceSummary(BaseModel):
+    invoice_id: str
+    number: str | None = None
+    status: str
+    client_email: str
+    total: str
+    currency: str
+    created_at: str | None = None
+    invoice_url: str
+
+
+class InvoiceList(BaseModel):
+    items: list[InvoiceSummary]
+    page: int
+    page_size: int
+    total_items: int
+    total_pages: int
+
+
+class InvoiceLine(BaseModel):
+    name: str
+    quantity: str
+    unit_amount: str
+    amount: str
+
+
+class PaymentRecord(BaseModel):
+    payment_id: str | None = None
+    date: str | None = None
+    method: str | None = None
+    amount: str
+    status: str | None = None
+
+
+class InvoiceDetail(InvoiceSummary):
+    items: list[InvoiceLine] = []
+    invoice_date: str | None = None
+    sent_at: str | None = None
+    due_date: str | None = None
+    payment_term: str | None = None
+    note: str | None = None
+    paid_amount: str = "0.00"
+    due_amount: str | None = None
+    payments: list[PaymentRecord] = []

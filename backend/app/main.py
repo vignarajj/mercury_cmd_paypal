@@ -5,14 +5,16 @@ import secrets
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Header, Path, Request
+from fastapi import APIRouter, Depends, FastAPI, Header, Path, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import Settings, get_settings
 from .errors import MercuryError
-from .models import InvoiceRequest, InvoiceResult, InvoiceStatus, ParsedInvoice, ParseRequest
+from .models import (
+    LIST_STATUSES, InvoiceDetail, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, ParsedInvoice, ParseRequest,
+)
 from .services.ai_service import OllamaClient, ParseService
 from .services.paypal_service import PayPalService
 
@@ -85,6 +87,43 @@ def create_app(settings: Settings | None = None, http_client: httpx.AsyncClient 
     @api.post("/invoice", response_model=InvoiceResult)
     async def create_invoice(body: InvoiceRequest, svc: PayPalService = Depends(paypal)) -> InvoiceResult:
         return await svc.create_and_send(body)
+
+    @api.get("/invoices", response_model=InvoiceList)
+    async def list_invoices(
+        page: int = Query(1, ge=1, le=500),
+        page_size: int = Query(20, ge=1, le=100),
+        status: list[str] = Query(default=[]),
+        q: str | None = Query(default=None, max_length=120),
+        svc: PayPalService = Depends(paypal),
+    ) -> InvoiceList:
+        bad = [x for x in status if x not in LIST_STATUSES]
+        if bad:
+            raise MercuryError("INVALID_INPUT", f"status: unknown value {bad[0]}", 422)
+        return await svc.list_invoices(page=page, page_size=page_size, status=status, q=q)
+
+    @api.get("/invoice/{invoice_id}/detail", response_model=InvoiceDetail)
+    async def invoice_detail(invoice_id: str = INVOICE_ID, svc: PayPalService = Depends(paypal)) -> InvoiceDetail:
+        return await svc.invoice_detail(invoice_id)
+
+    @api.get("/info")
+    async def info(request: Request) -> dict:
+        """Read-only configuration and live health for the Settings screen. Never includes secrets."""
+        state = request.app.state
+        try:
+            await state.paypal.get_token()
+            paypal_state = "ok"
+        except MercuryError as exc:
+            paypal_state = "error"
+            paypal_error = exc.message
+        else:
+            paypal_error = None
+        llm_state = await state.ollama.health() if state.ollama else "disabled"
+        return {
+            "version": app.version,
+            "paypal": {"status": paypal_state, "error": paypal_error, "host": s.paypal_api_base, "mode": "sandbox",
+                       "merchant_email": s.merchant_email or None},
+            "llm": {"provider": s.llm_provider, "model": s.ollama_model if state.ollama else None, "status": llm_state},
+        }
 
     @api.post("/invoice/{invoice_id}/send", response_model=InvoiceResult)
     async def resend_invoice(invoice_id: str = INVOICE_ID, svc: PayPalService = Depends(paypal)) -> InvoiceResult:

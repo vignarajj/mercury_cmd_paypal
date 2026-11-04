@@ -9,6 +9,7 @@ import asyncio
 import datetime as dt
 import logging
 import time
+from decimal import Decimal
 from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
@@ -16,7 +17,9 @@ import httpx
 
 from ..config import Settings
 from ..errors import MercuryError
-from ..models import InvoiceRequest, InvoiceResult, InvoiceStatus
+from ..models import (
+    InvoiceDetail, InvoiceLine, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, InvoiceSummary, PaymentRecord,
+)
 
 log = logging.getLogger("mercury.paypal")
 
@@ -301,3 +304,80 @@ class PayPalService:
         txns = (inv.get("payments") or {}).get("transactions") or []
         paid_at = txns[0].get("payment_date") if txns else None
         return InvoiceStatus(invoice_id=invoice_id, status=inv.get("status", "UNKNOWN"), paid_at=paid_at)
+
+    # ---------------------------------------------------- history and detail
+
+    @staticmethod
+    def _view_url(inv: dict, invoice_id: str) -> str:
+        return ((inv.get("detail") or {}).get("metadata") or {}).get("recipient_view_url") or fallback_view_url(invoice_id)
+
+    @classmethod
+    def _summary(cls, inv: dict) -> InvoiceSummary:
+        invoice_id = inv.get("id") or ""
+        detail = inv.get("detail") or {}
+        recipients = inv.get("primary_recipients") or [{}]
+        return InvoiceSummary(
+            invoice_id=invoice_id,
+            number=detail.get("invoice_number"),
+            status=inv.get("status", "UNKNOWN"),
+            client_email=((recipients[0].get("billing_info") or {}).get("email_address")) or "",
+            total=(inv.get("amount") or {}).get("value") or "0.00",
+            currency=detail.get("currency_code") or "USD",
+            created_at=(detail.get("metadata") or {}).get("create_time"),
+            invoice_url=cls._view_url(inv, invoice_id),
+        )
+
+    async def list_invoices(self, *, page: int, page_size: int, status: list[str], q: str | None) -> InvoiceList:
+        """The merchant's invoices from PayPal, newest first. `q` matches the client email or invoice number."""
+        body: dict[str, Any] = {}
+        if status:
+            body["status"] = status
+        text = (q or "").strip()
+        if text and "@" in text and " " not in text:
+            body["recipient_email"] = text
+        resp = await self._request(
+            "POST", f"/v2/invoicing/search-invoices?page={page}&page_size={page_size}&total_required=true", json=body
+        )
+        if resp.status_code != 200:
+            raise self._error_from(resp)
+        data = resp.json()
+        items = [self._summary(i) for i in data.get("items", [])]
+        if text and not body.get("recipient_email"):
+            needle = text.lower()
+            items = [i for i in items if needle in i.client_email.lower() or needle in (i.number or "").lower()
+                     or needle in i.invoice_id.lower()]
+        items.sort(key=lambda i: i.created_at or "", reverse=True)
+        return InvoiceList(items=items, page=page, page_size=page_size,
+                           total_items=int(data.get("total_items", len(items))), total_pages=int(data.get("total_pages", 1)))
+
+    async def invoice_detail(self, invoice_id: str) -> InvoiceDetail:
+        inv = await self.get_invoice(invoice_id)
+        detail = inv.get("detail") or {}
+        meta = detail.get("metadata") or {}
+        currency = detail.get("currency_code") or "USD"
+        lines = []
+        for it in inv.get("items") or []:
+            unit = Decimal((it.get("unit_amount") or {}).get("value") or "0")
+            qty = Decimal(str(it.get("quantity") or "1"))
+            lines.append(InvoiceLine(name=it.get("name") or "Item", quantity=str(qty.normalize()), unit_amount=f"{unit:.2f}",
+                                     amount=f"{(unit * qty).quantize(Decimal('0.01')):.2f}"))
+        term = detail.get("payment_term") or {}
+        payments = (inv.get("payments") or {})
+        records = [
+            PaymentRecord(payment_id=t.get("payment_id"), date=t.get("payment_date_time") or t.get("payment_date"),
+                          method=t.get("method"), amount=(t.get("amount") or {}).get("value") or "0.00", status=t.get("transaction_status"))
+            for t in payments.get("transactions") or []
+        ]
+        base = self._summary({**inv, "id": invoice_id})
+        return InvoiceDetail(
+            **base.model_dump(),
+            items=lines,
+            invoice_date=detail.get("invoice_date"),
+            sent_at=meta.get("first_sent_time") or meta.get("last_sent_time"),
+            due_date=term.get("due_date"),
+            payment_term=term.get("term_type"),
+            note=detail.get("note"),
+            paid_amount=(payments.get("paid_amount") or {}).get("value") or "0.00",
+            due_amount=(inv.get("due_amount") or {}).get("value"),
+            payments=records,
+        )
