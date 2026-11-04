@@ -52,7 +52,7 @@ Real-world quirks found against the live sandbox and handled in code (see `mercu
 
 ## How AI is used
 
-- **Model:** a local [Ollama](https://ollama.com) model (`gemma4:e2b-it-qat` by default) with **JSON-schema structured output** and temperature 0. No data leaves the machine.
+- **Model:** a local [Ollama](https://ollama.com) model (`gemma4:e2b-it-qat` by default) with **JSON-schema structured output** and temperature 0. No data leaves the machine, unless you opt in to Ollama's cloud models in Settings (off by default).
 - **Grounding layer** (`backend/app/services/grounding.py`): every value must be backed by the user's text or it is dropped with a visible warning.
 - **Evaluation:** `make eval` runs a 33-case corpus through the real model (33/33) and through the regex fallback (30/30 on the cases it supports). The corpus is developer-written, so it is a regression suite, not an unbiased benchmark.
 - **Latency:** about 2 to 3 s per parse once the model is loaded (the first parse after a cold start can take about 10 s; the backend warms the model at startup).
@@ -105,7 +105,8 @@ The same steps, with copy buttons, are in **Settings → AI model → How to set
 
 **Choosing a different model.** Run `ollama pull <name>`, press **Check again** in Settings and pick it from the list. It applies right away and is remembered in `backend/.mercury-prefs.json` (git-ignored). The default for a fresh checkout is `OLLAMA_MODEL` in `backend/.env`.
 
-- Settings lists every model your Ollama has. Cloud models (names ending in `:cloud`) and embedding models are shown greyed out with the reason: cloud models run on ollama.com, so your text would leave the computer, and embedding models cannot read a sentence.
+- Settings lists every model your Ollama has. Embedding models are shown greyed out because they cannot read a sentence.
+- **Cloud models are off by default.** Models whose names end in `:cloud` run on ollama.com, so the sentence you type would leave your computer. They are listed greyed out until you turn on **Settings → AI model → Cloud models**. Then they appear in the model list marked "cloud", the AI model section says so while one is selected, and turning the switch off again returns you to a local model at once. Cloud models need an Ollama account (`ollama signin`). The recorded demo and the 33-case evaluation use the local model only.
 - Only `gemma4:e2b-it-qat` has been checked against the 33-case corpus. With another model, read the preview before sending, or measure it with `OLLAMA_MODEL=<name> make eval`.
 - Ollama on a different machine or port: set `OLLAMA_BASE_URL` in `backend/.env` and restart the backend.
 - The first read after starting can take about 10 seconds while the model loads; later ones take 2 to 3 seconds.
@@ -171,7 +172,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 ## Tests
 
 ```bash
-make test       # 172 backend tests (mocked PayPal and Ollama) + 115 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
+make test       # 177 backend tests (mocked PayPal and Ollama) + 120 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
 make shots      # regenerate the README screenshots and cover (needs Google Chrome)

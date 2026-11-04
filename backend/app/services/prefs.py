@@ -1,4 +1,4 @@
-"""Small user preferences file (currently just the chosen AI model), kept next to the backend and git-ignored."""
+"""Small user preferences file (the chosen AI model and whether cloud models are allowed), kept next to the backend and git-ignored."""
 import json
 import logging
 import os
@@ -25,9 +25,19 @@ class Preferences:
         value = self._read().get("ollama_model")
         return value.strip() if isinstance(value, str) and value.strip() else None
 
+    @property
+    def allow_cloud(self) -> bool:
+        return self._read().get("allow_cloud") is True
+
     def set_ollama_model(self, model: str) -> None:
+        self._write("ollama_model", model)
+
+    def set_allow_cloud(self, allow: bool) -> None:
+        self._write("allow_cloud", allow)
+
+    def _write(self, key: str, value: object) -> None:
         data = self._read()
-        data["ollama_model"] = model
+        data[key] = value
         try:
             self.path.write_text(json.dumps(data, indent=2) + "\n")
         except OSError as exc:  # still works for this session; just not remembered

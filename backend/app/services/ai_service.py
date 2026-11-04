@@ -114,11 +114,12 @@ class OllamaClient:
         except (httpx.HTTPError, TimeoutError):
             return False
 
-    async def installed_models(self) -> tuple[list[dict], list[dict]] | None:
+    async def installed_models(self, allow_cloud: bool = False) -> tuple[list[dict], list[dict]] | None:
         """Everything Ollama has, split into (usable, unavailable); None when Ollama cannot be reached.
 
-        Cloud models run on ollama.com, so the text would leave this computer, and embedding-only models
-        cannot read a sentence; both are reported with the reason instead of silently dropped.
+        Cloud models run on ollama.com, so the text leaves this computer; they are usable only when
+        `allow_cloud` is on (an explicit opt-in in Settings) and are then flagged `cloud: True`. Embedding-only
+        models cannot read a sentence. Anything not usable is reported with the reason instead of silently dropped.
         """
         try:
             resp = await self._http.get(f"{self._s.ollama_base_url}/api/tags", timeout=2)
@@ -132,14 +133,16 @@ class OllamaClient:
             if not name:
                 continue
             caps = m.get("capabilities")
-            if m.get("remote_host") or name.endswith(":cloud"):
-                unavailable.append({"name": name, "reason": "cloud"})
-            elif (caps is not None and "completion" not in caps) or (caps is None and "embed" in name):
+            is_cloud = bool(m.get("remote_host")) or name.endswith(":cloud")
+            if caps is not None and "completion" not in caps or caps is None and "embed" in name:
                 unavailable.append({"name": name, "reason": "embedding"})
+            elif is_cloud and not allow_cloud:
+                unavailable.append({"name": name, "reason": "cloud"})
             else:
                 details = m.get("details") or {}
-                usable.append({"name": name, "size_bytes": m.get("size"), "parameters": details.get("parameter_size") or None})
-        return sorted(usable, key=lambda x: x["name"]), sorted(unavailable, key=lambda x: x["name"])
+                usable.append({"name": name, "size_bytes": None if is_cloud else m.get("size"),
+                               "parameters": details.get("parameter_size") or None, "cloud": is_cloud})
+        return sorted(usable, key=lambda x: (x["cloud"], x["name"])), sorted(unavailable, key=lambda x: x["name"])
 
     async def health(self) -> str:
         """'ok' | 'model_missing' | 'offline'"""

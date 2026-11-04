@@ -14,15 +14,15 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Area | Tests | What they prove |
 | :--- | :---: | :--- |
 | Backend, PayPal service and API (`test_paypal.py`, `test_api.py`) | 41 | Token caching and refresh, create, send with retry, idempotency, partial-failure retry, error mapping, self-invoice block, CORS, auth token, sandbox-only guard |
-| Backend, AI model list and switching (`test_models_api.py`) | 10 | Only local chat models listed, cloud and embedding models reported as unavailable with the reason, switch applies at once and is remembered, saved choice beats `OLLAMA_MODEL`, rejects missing models, offline and disabled states, corrupt preferences file ignored |
+| Backend, AI model list and switching (`test_models_api.py`) | 15 | Only local chat models listed, cloud and embedding models reported as unavailable with the reason, switch applies at once and is remembered, saved choice beats `OLLAMA_MODEL`, rejects missing models, cloud models refused until opted in, listed and selectable after, turning cloud off falls back to a local model, a saved cloud model ignored without the opt-in, offline and disabled states, corrupt preferences file ignored |
 | Backend, history, detail and info (`test_history.py`) | 9 | PayPal search mapped and sorted newest first, status and email filters, text search, input validation, invoice detail with items, dates and payments, `/api/info` health and no secrets |
 | Backend, parsing (`test_parse.py`) | 112 | 33-case corpus through the rule-based parser and through grounding; hallucinated email and amount dropped; fallback when Ollama fails, is slow or returns junk |
 | Frontend logic (`invoice`, `entities`, `recents`, `format`) | 50 | Exact money math, validation, request building, entity highlighting, recents store, history filters and query building, dates and labels |
 | Frontend status polling (`useInvoiceStatus`) | 6 | Polls for an hour with backoff, keeps going past five minutes, re-checks on focus, stops at a final status |
 | Frontend palette flow (`palette.flow.test.tsx`) | 6 | Box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
-| Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 29 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, AI model picker (switch, failure, unavailable models with reasons, setup guide, Ollama off, AI disabled), theme and clearing recents |
+| Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 34 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, AI model picker (switch, failure, unavailable models with reasons, cloud opt-in and fallback, setup guide, Ollama off, AI disabled), theme and clearing recents |
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
-| **Total** | **287** | Backend 172, frontend 115, plus a clean TypeScript check |
+| **Total** | **297** | Backend 177, frontend 120, plus a clean TypeScript check |
 
 Related commands: `make eval` (parse corpus against the real model), `make smoke TO=<buyer email>` (real PayPal round trip), `make shots` (regenerate screenshots).
 
@@ -143,6 +143,7 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 | 57 | Model setup guide | Open **Settings → AI model**; also stop Ollama or remove the model | A four-step guide (install, run, pull, check) with copy buttons; it opens by itself when no model is ready | Automated, Live (browser) |
 | 58 | Models you cannot use | Look under the model picker | "N other models in Ollama can't be used here", each with its reason (cloud or embedding) | Automated, Live (browser) |
 | 59 | Dock icon | Run the app and look at the Dock while the Dashboard is open | The Mercury Cmd icon, not the generic "exec" icon | Live (desktop, dev build) |
+| 60 | Cloud models | **Settings → AI model**, turn on **Cloud models**, pick one, then turn the switch off | Off by default; after turning on, cloud models are listed marked "cloud" with a warning; picking one shows the Cloud badge; turning it off returns to the local model | Automated, Live (API list and refusal; no text was sent to a cloud model) |
 
 ## 4. Known gaps
 

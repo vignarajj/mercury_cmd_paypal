@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { AlertTriangle, Check, Copy, Cpu } from "lucide-react";
+import { AlertTriangle, Check, Cloud, Copy, Cpu } from "lucide-react";
 import { useRequest } from "../../hooks/useRequest";
 import { ApiError, api } from "../../lib/api";
 import type { ModelState } from "../../lib/types";
 import SelectField from "../SelectField";
+import { Switch } from "./Controls";
 import { Badge, Card, Row } from "./SettingsParts";
 
 const REASON: Record<"cloud" | "embedding", string> = {
-  cloud: "Runs on ollama.com, so your text would leave this computer",
+  cloud: "Runs on ollama.com. Turn on cloud models above to use it",
   embedding: "Search model; it can't read a sentence and fill an invoice",
 };
 
@@ -67,7 +68,7 @@ function OllamaGuide({ state }: { state: ModelState }) {
         </Step>
       </ol>
       <div className="mt-4 space-y-1.5 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-ink-dim">
-        <p><span className="font-medium text-ink">Want a different model?</span> Run <span className="font-mono text-ink">ollama pull &lt;name&gt;</span>, press Check again, and choose it above. Any local chat model is listed; embedding and cloud models are not.</p>
+        <p><span className="font-medium text-ink">Want a different model?</span> Run <span className="font-mono text-ink">ollama pull &lt;name&gt;</span>, press Check again, and choose it above. Any local chat model is listed. Embedding models never are, and cloud models appear only after you turn them on.</p>
         <p><span className="font-medium text-ink">Ollama on another address?</span> Set <span className="font-mono text-ink">OLLAMA_BASE_URL</span> in <span className="font-mono text-ink">backend/.env</span> and restart the backend. Currently: <span className="font-mono text-ink">{state.base_url ?? "http://localhost:11434"}</span></p>
         <p><span className="font-medium text-ink">Slow first invoice?</span> The first read after starting can take about 10 seconds while the model loads. Later ones take 2 to 3 seconds.</p>
       </div>
@@ -115,10 +116,22 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
     setSaving(true); setError(null); setSaved(null);
     try {
       setOverride(await api.setModel(name));
-      setSaved(name);
+      setSaved(`Now using ${name}.`);
       onChanged?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not switch the model. Try again.");
+    } finally { setSaving(false); }
+  };
+  const toggleCloud = async (allow: boolean) => {
+    setSaving(true); setError(null); setSaved(null);
+    try {
+      const before = (override ?? models.data)?.current;
+      const next = await api.allowCloud(allow);
+      setOverride(next);
+      setSaved(allow ? "Cloud models are on. Pick one from the list to use it." : next.current !== before ? `Cloud models are off. Back to ${next.current}.` : "Cloud models are off.");
+      if (next.current !== before) onChanged?.();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not change that setting. Try again.");
     } finally { setSaving(false); }
   };
   const refresh = () => { setOverride(null); setSaved(null); setError(null); models.reload(); };
@@ -126,9 +139,14 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
   const installed = m?.models ?? [];
   const current = m?.current ?? "";
   const hasCurrent = installed.some((x) => x.name === current);
-  
+  const onCloud = installed.some((x) => x.name === current && x.cloud);
+  const cloudModels = installed.filter((x) => x.cloud);
+  const description = onCloud
+    ? "Reads your sentence and fills in the invoice. This model runs on ollama.com, so what you type is sent there."
+    : "Reads your sentence and fills in the invoice. It runs on this computer through Ollama, so your text never leaves it.";
+
   return (
-    <Card id="ai-model" title="AI model" description="Reads your sentence and fills in the invoice. It runs on this computer through Ollama, so your text never leaves it.">
+    <Card id="ai-model" title="AI model" description={description}>
       {models.error && !m ? (
         <div role="alert" className="flex items-start gap-3 px-5 py-4 text-[13.5px] text-bad">
           <AlertTriangle size={16} aria-hidden className="mt-0.5 shrink-0" />
@@ -144,19 +162,35 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
           <Row label="Model" hint={m.status === "offline" ? "Start Ollama to see your installed models." : installed.length ? "Choose from the models installed in Ollama. The change applies right away." : "No local models found yet. Follow the steps below."}>
             <span className="flex items-center gap-3">
               <StatusBadge state={m} />
+              {onCloud && <Badge tone="warn"><Cloud size={12} aria-hidden />Cloud</Badge>}
               {installed.length > 0 && (
                 <SelectField label="AI model" icon={Cpu} value={current} disabled={saving} onChange={(v) => void choose(v)}>
                   {!hasCurrent && <option value={current} disabled>{current} (not installed)</option>}
                   {installed.map((x) => (
-                    <option key={x.name} value={x.name}>{x.name}{x.name === m.default ? " (recommended)" : ""}{gigabytes(x.size_bytes)}</option>
+                    <option key={x.name} value={x.name}>{x.name}{x.name === m.default ? " (recommended)" : ""}{x.cloud ? " · cloud" : gigabytes(x.size_bytes)}</option>
                   ))}
                 </SelectField>
               )}
             </span>
           </Row>
+          {m.status !== "offline" && (
+            <Row label="Cloud models" hint="Off by default. Ollama's cloud models run on ollama.com, so everything you type is sent there. Needs an Ollama account (run ollama signin).">
+              <span className="flex items-center gap-2">
+                <Cloud size={14} aria-hidden className="text-ink-faint" />
+                <Switch label="Allow cloud models" checked={m.allow_cloud} onChange={(v) => { if (!saving) void toggleCloud(v); }} />
+              </span>
+            </Row>
+          )}
+          {m.allow_cloud && (
+            <div role="note" className="px-5 py-3 text-[12.5px] text-warn">
+              {cloudModels.length > 0
+                ? `Cloud models are on. If you choose one, your invoice sentences go to ollama.com. Keep it off for private work.`
+                : "Cloud models are on, but Ollama lists none. Run ollama signin, then press Check again."}
+            </div>
+          )}
           {(error || saved) && (
             <div role={error ? "alert" : "status"} className={`px-5 py-3 text-[13px] ${error ? "text-bad" : "text-ok"}`}>
-              {error ?? `Now using ${saved}.`}
+              {error ?? saved}
             </div>
           )}
           {m.current && m.current !== m.default && m.status === "ok" && (
@@ -167,7 +201,7 @@ export default function ModelCard({ onChanged }: { onChanged?: () => void }) {
           {m.unavailable.length > 0 && <Unavailable items={m.unavailable} />}
           <OllamaGuide state={m} />
           <div className="flex items-center justify-between gap-4 px-5 py-2.5">
-            <p className="text-[12px] text-ink-faint">The default comes from OLLAMA_MODEL in backend/.env. Cloud models are hidden to keep your text on this computer.</p>
+            <p className="text-[12px] text-ink-faint">The default comes from OLLAMA_MODEL in backend/.env.{m.allow_cloud ? "" : " Cloud models are hidden to keep your text on this computer."}</p>
             <button type="button" onClick={refresh} className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-dim transition hover:bg-surface-2 hover:text-ink">Check again</button>
           </div>
         </>

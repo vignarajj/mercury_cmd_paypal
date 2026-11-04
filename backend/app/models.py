@@ -89,6 +89,10 @@ class ModelChoice(BaseModel):
     model: Annotated[str, Field(min_length=1, max_length=200)]
 
 
+class CloudChoice(BaseModel):
+    allow: bool
+
+
 class ParseRequest(BaseModel):
     text: Annotated[str, Field(min_length=1, max_length=1000)]
 

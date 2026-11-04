@@ -21,14 +21,14 @@ const INFO: BackendInfo = {
 };
 
 const MODELS: ModelState = {
-  provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434",
-  models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B" }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B" }],
+  provider: "ollama", status: "ok", current: "gemma4:e2b-it-qat", default: "gemma4:e2b-it-qat", base_url: "http://localhost:11434", allow_cloud: false,
+  models: [{ name: "gemma4:e2b-it-qat", size_bytes: 4_336_358_185, parameters: "4.6B", cloud: false }, { name: "qwen3:4b", size_bytes: 2_500_000_000, parameters: "4B", cloud: false }],
   unavailable: [{ name: "nomic-embed-text:latest", reason: "embedding" }, { name: "qwen3.5:cloud", reason: "cloud" }],
 };
 const rows = [summary(3, { status: "PAID" }), summary(2), summary(1)];
 vi.mock("./lib/api", async (orig) => ({
   ...(await orig<typeof import("./lib/api")>()),
-  api: { invoices: vi.fn(), invoiceDetail: vi.fn(), info: vi.fn(), models: vi.fn(), setModel: vi.fn() },
+  api: { invoices: vi.fn(), invoiceDetail: vi.fn(), info: vi.fn(), models: vi.fn(), setModel: vi.fn(), allowCloud: vi.fn() },
 }));
 import { api, ApiError } from "./lib/api";
 import Dashboard from "./components/dashboard/Dashboard";
@@ -44,6 +44,7 @@ beforeEach(() => {
   vi.mocked(api.info).mockReset().mockResolvedValue(INFO);
   vi.mocked(api.models).mockReset().mockResolvedValue(MODELS);
   vi.mocked(api.setModel).mockReset();
+  vi.mocked(api.allowCloud).mockReset();
 });
 afterEach(cleanup);
 
@@ -165,7 +166,55 @@ describe("Settings", () => {
     expect(screen.getByText("nomic-embed-text:latest")).toBeTruthy();
     expect(screen.getByText(/Search model; it can't read a sentence/)).toBeTruthy();
     expect(screen.getByText("qwen3.5:cloud")).toBeTruthy();
-    expect(screen.getByText(/your text would leave this computer/)).toBeTruthy();
+    expect(screen.getByText(/Turn on cloud models above/)).toBeTruthy();
+  });
+
+  describe("cloud models", () => {
+    const CLOUD = { name: "glm-5.2:cloud", size_bytes: null, parameters: null, cloud: true };
+    const ALLOWED: ModelState = { ...MODELS, allow_cloud: true, models: [...MODELS.models, CLOUD], unavailable: [MODELS.unavailable[0]] };
+
+    it("keeps them off until you turn them on, and says what that means", async () => {
+      vi.mocked(api.allowCloud).mockResolvedValue(ALLOWED);
+      render(<Dashboard />);
+      const toggle = await screen.findByRole("switch", { name: "Allow cloud models" });
+      expect(toggle.getAttribute("aria-checked")).toBe("false");
+      expect(screen.getByText(/everything you type is sent there/)).toBeTruthy();
+      fireEvent.click(toggle);
+      expect(await screen.findByText(/your invoice sentences go to ollama.com/)).toBeTruthy();
+      expect(api.allowCloud).toHaveBeenCalledWith(true);
+      expect(screen.getByRole("switch", { name: "Allow cloud models" }).getAttribute("aria-checked")).toBe("true");
+      const options = within(screen.getByRole("combobox", { name: "AI model" })).getAllByRole("option").map((o) => o.textContent);
+      expect(options).toContain("glm-5.2:cloud · cloud");
+    });
+
+    it("flags a cloud model as running off this computer", async () => {
+      vi.mocked(api.models).mockResolvedValue({ ...ALLOWED, current: "glm-5.2:cloud" });
+      render(<Dashboard />);
+      expect(await screen.findByText("Cloud")).toBeTruthy();
+      expect(screen.getByText(/This model runs on ollama.com, so what you type is sent there/)).toBeTruthy();
+    });
+
+    it("tells you when it falls back to a local model after turning cloud off", async () => {
+      vi.mocked(api.models).mockResolvedValue({ ...ALLOWED, current: "glm-5.2:cloud" });
+      vi.mocked(api.allowCloud).mockResolvedValue({ ...MODELS, allow_cloud: false });
+      render(<Dashboard />);
+      fireEvent.click(await screen.findByRole("switch", { name: "Allow cloud models" }));
+      expect(await screen.findByText("Cloud models are off. Back to gemma4:e2b-it-qat.")).toBeTruthy();
+      expect(api.allowCloud).toHaveBeenCalledWith(false);
+    });
+
+    it("says so when cloud is on but Ollama lists no cloud model", async () => {
+      vi.mocked(api.models).mockResolvedValue({ ...MODELS, allow_cloud: true });
+      render(<Dashboard />);
+      expect(await screen.findByText(/Run ollama signin/)).toBeTruthy();
+    });
+
+    it("shows why turning it on failed", async () => {
+      vi.mocked(api.allowCloud).mockRejectedValue(new ApiError("INTERNAL", "Something went wrong on the backend.", true));
+      render(<Dashboard />);
+      fireEvent.click(await screen.findByRole("switch", { name: "Allow cloud models" }));
+      expect((await screen.findByRole("alert")).textContent).toMatch(/Something went wrong/);
+    });
   });
 
   it("includes a four-step Ollama setup guide, closed once a model is ready", async () => {

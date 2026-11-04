@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from .config import DEFAULT_MODEL, Settings, get_settings
 from .errors import MercuryError
 from .models import (
-    LIST_STATUSES, InvoiceDetail, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, ModelChoice, ParsedInvoice, ParseRequest,
+    LIST_STATUSES, InvoiceDetail, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, CloudChoice, ModelChoice, ParsedInvoice, ParseRequest,
 )
 from .services.ai_service import OllamaClient, ParseService
 from .services.paypal_service import PayPalService
@@ -36,8 +36,9 @@ def create_app(
         app.state.settings = s
         app.state.paypal = PayPalService(s, client)
         app.state.ollama = OllamaClient(s, client) if s.llm_provider == "ollama" else None
-        if app.state.ollama and prefs.ollama_model:  # the model picked in Settings wins over OLLAMA_MODEL
-            app.state.ollama.model = prefs.ollama_model
+        saved = prefs.ollama_model
+        if app.state.ollama and saved and (prefs.allow_cloud or not saved.endswith(":cloud")):
+            app.state.ollama.model = saved  # the model picked in Settings wins over OLLAMA_MODEL
         app.state.parser = ParseService(app.state.ollama)
         warm = asyncio.create_task(app.state.ollama.warm_up()) if app.state.ollama else None
         yield
@@ -135,12 +136,12 @@ def create_app(
         ollama = request.app.state.ollama
         if ollama is None:
             return {"provider": s.llm_provider, "status": "disabled", "current": None, "default": DEFAULT_MODEL,
-                    "base_url": None, "models": [], "unavailable": []}
-        found = await ollama.installed_models()
+                    "base_url": None, "allow_cloud": False, "models": [], "unavailable": []}
+        found = await ollama.installed_models(prefs.allow_cloud)
         status = "offline" if found is None else await ollama.health()
         usable, unavailable = found or ([], [])
         return {"provider": "ollama", "status": status, "current": ollama.model, "default": DEFAULT_MODEL,
-                "base_url": s.ollama_base_url, "models": usable, "unavailable": unavailable}
+                "base_url": s.ollama_base_url, "allow_cloud": prefs.allow_cloud, "models": usable, "unavailable": unavailable}
 
     @api.get("/models")
     async def list_models(request: Request) -> dict:
@@ -149,19 +150,42 @@ def create_app(
 
     @api.post("/model")
     async def choose_model(body: ModelChoice, request: Request) -> dict:
-        """Switch the parsing model without restarting. Only locally installed models are accepted."""
+        """Switch the parsing model without restarting. Cloud models are accepted only after the opt-in."""
         ollama = request.app.state.ollama
         if ollama is None:
             raise MercuryError("LLM_DISABLED", "AI parsing is turned off (LLM_PROVIDER=none in backend/.env).", 409)
-        found = await ollama.installed_models()
+        found = await ollama.installed_models(prefs.allow_cloud)
         if found is None:
             raise MercuryError("LLM_OFFLINE", "Ollama isn't running. Start it, then choose a model.", 503, retryable=True)
+        if any(m["name"] == body.model and m["reason"] == "cloud" for m in found[1]):
+            raise MercuryError("CLOUD_NOT_ALLOWED",
+                               f"{body.model} runs on ollama.com. Turn on \"Allow cloud models\" in Settings first.", 422)
         if body.model not in {m["name"] for m in found[0]}:
             raise MercuryError("MODEL_NOT_INSTALLED",
                                f"{body.model} isn't installed locally. Run: ollama pull {body.model}", 422)
         ollama.model = body.model
         prefs.set_ollama_model(body.model)
         request.app.state.warm_task = asyncio.create_task(ollama.warm_up())  # load it now so the next invoice is not slow
+        return await model_state(request)
+
+    @api.post("/cloud")
+    async def allow_cloud(body: CloudChoice, request: Request) -> dict:
+        """Opt in or out of cloud models (they run on ollama.com, so the invoice text leaves this computer).
+
+        Turning it off while a cloud model is selected falls back to a local model right away.
+        """
+        ollama = request.app.state.ollama
+        if ollama is None:
+            raise MercuryError("LLM_DISABLED", "AI parsing is turned off (LLM_PROVIDER=none in backend/.env).", 409)
+        prefs.set_allow_cloud(body.allow)
+        if not body.allow:
+            found = await ollama.installed_models(True)
+            everything = found[0] if found else []
+            if ollama.model.endswith(":cloud") or any(m["name"] == ollama.model and m["cloud"] for m in everything):
+                local = [m["name"] for m in everything if not m["cloud"]]
+                ollama.model = s.ollama_model if s.ollama_model in local or not local else local[0]
+                prefs.set_ollama_model(ollama.model)
+                request.app.state.warm_task = asyncio.create_task(ollama.warm_up())
         return await model_state(request)
 
     @api.post("/invoice/{invoice_id}/send", response_model=InvoiceResult)

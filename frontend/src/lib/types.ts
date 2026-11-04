@@ -47,6 +47,7 @@ export interface ModelState {
   current: string | null;
   default: string;
   base_url: string | null;
-  models: { name: string; size_bytes: number | null; parameters: string | null }[];
+  allow_cloud: boolean;
+  models: { name: string; size_bytes: number | null; parameters: string | null; cloud: boolean }[];
   unavailable: { name: string; reason: "cloud" | "embedding" }[];
 }

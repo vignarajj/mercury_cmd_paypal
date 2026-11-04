@@ -48,5 +48,6 @@ export const api = {
   invoiceDetail: (invoiceId: string, signal?: AbortSignal) => request<InvoiceDetail>(`/api/invoice/${invoiceId}/detail`, {}, signal),
   models: (signal?: AbortSignal) => request<ModelState>("/api/models", {}, signal),
   setModel: (model: string) => request<ModelState>("/api/model", { method: "POST", body: JSON.stringify({ model }) }),
+  allowCloud: (allow: boolean) => request<ModelState>("/api/cloud", { method: "POST", body: JSON.stringify({ allow }) }),
   info: (signal?: AbortSignal) => request<BackendInfo>("/api/info", {}, signal),
 };
