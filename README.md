@@ -1,0 +1,153 @@
+# Mercury Cmd
+
+**A system-wide AI command palette that turns plain English into real PayPal invoices.**
+Press a hotkey from any app, type *"Bill sarah@acme.co $1,200 for brand refresh and $300 for icons, net 15"*, review an editable preview, press `⌘↵`, and a PayPal invoice is created, sent, and tracked until it is paid.
+
+![license](https://img.shields.io/badge/license-MIT-blue) ![sandbox](https://img.shields.io/badge/PayPal-sandbox%20only-orange)
+
+> Built for the **PayPal AI Hackathon** (Oct 1 to Nov 12, 2026). Everything here was created during the submission period.
+> **Sandbox only:** no real money moves, and the backend refuses to start against a non-sandbox PayPal host.
+
+<!-- screenshots/GIF are added in the demo-video phase -->
+
+---
+
+## What it does
+
+- **Natural-language invoicing.** One sentence in, a structured invoice out: client email, one or many line items, quantities, currency (USD, EUR, GBP, CAD, AUD), and payment terms ("net 30", "due on receipt", "due in 2 weeks").
+- **AI you can trust with money.** A local LLM proposes the invoice, then **server-side grounding** rejects anything the user did not actually type: an email that is not in the text, an amount that is not in the text, an invented quantity or term. Completeness is computed by the server, never taken from the model.
+- **Always works.** If Ollama is missing, slow, or returns junk, a deterministic rule-based parser answers instead (clearly labelled "Basic mode").
+- **Review before anything is sent.** An editable preview card with live totals and amber "Missing: email" badges.
+- **Full PayPal loop.** Create draft → send → payer link → **live status** (Sent → Paid) right in the palette.
+- **Safe by construction.** Duplicate submits create one invoice; a failed send keeps the draft and offers *Retry send*; invoicing your own merchant account is blocked before any API call.
+- **Keyboard-first.** Global hotkey, `⌘↵` to send, `Esc` to step back, `⌘C` to copy the payment link.
+
+## How PayPal is used (PayPal Invoicing API v2, sandbox)
+
+| Step | Endpoint | Notes |
+| :--- | :--- | :--- |
+| Auth | `POST /v1/oauth2/token` | Cached until near expiry, one lock, one transparent refresh on a 401 |
+| Create draft | `POST /v2/invoicing/invoices` | Money as exact decimals; payment term mapped to `NET_x` / `DUE_ON_RECEIPT` |
+| Send | `POST /v2/invoicing/invoices/{id}/send` | Retried with backoff (PayPal can 404 right after create) |
+| Link + status | `GET /v2/invoicing/invoices/{id}` | `recipient_view_url`; polled every 4 s for `PAID` |
+
+Real-world quirks found against the live sandbox and handled in code (see `mercury_cmd_execution_spec.md` section 4): create returns a link object, not an `id`; PayPal can answer errors with a misleading top-level name (the truth is in `details[0]`); and sending a local `invoice_date` can make an invoice `SCHEDULED` instead of sent when your calendar day is ahead of the US.
+
+## How AI is used
+
+- **Model:** a local [Ollama](https://ollama.com) model (`gemma4:e2b-it-qat` by default) with **JSON-schema structured output** and temperature 0. No data leaves the machine.
+- **Grounding layer** (`backend/app/services/grounding.py`): every value must be backed by the user's text or it is dropped with a visible warning.
+- **Evaluation:** `make eval` runs a 33-case corpus through the real model (33/33) and through the regex fallback (30/30 on the cases it supports). The corpus is developer-written, so it is a regression suite, not an unbiased benchmark.
+- **Latency:** about 2 to 3 s per parse once the model is loaded (the first parse after a cold start can take about 10 s; the backend warms the model at startup).
+
+---
+
+## Quickstart
+
+### Prerequisites
+- macOS, Node.js 20+, Python 3.12+
+- Rust ([rustup.rs](https://rustup.rs)) **only for the desktop app**; the browser mode needs no Rust
+- Optional: [Ollama](https://ollama.com) for the AI parser
+
+### 1. Setup (about 2 minutes)
+```bash
+make setup
+```
+This creates the Python virtualenv, installs dependencies, and writes `backend/.env` and `frontend/.env.local` with a generated shared token.
+
+### 2. PayPal sandbox setup (about 5 minutes)
+Testers of this submission: sandbox credentials are provided in the Devpost *testing instructions*; paste them into `backend/.env` and skip to step 3. To use your own:
+
+1. Log in at [developer.paypal.com](https://developer.paypal.com) → **Testing Tools → Sandbox Accounts**.
+2. Make sure there is a **Business** (merchant) and a **Personal** (buyer) sandbox account, **both with country United States**. (India-based sandbox accounts cannot send invoices: `INR_FOREIGN_CURRENCY_BLOCKED`.)
+3. **Apps & Credentials → Sandbox → Create App** (type *Merchant*, pick the Business account). **Tick *Invoicing* under Features and click Save *before* you use the credentials for the first time.** PayPal reuses the access token it issued earlier, so enabling Invoicing afterwards can leave you with a token that returns `403 NOT_AUTHORIZED`; if that happens, create a fresh app.
+4. Put these in `backend/.env`:
+   ```
+   PAYPAL_CLIENT_ID=...
+   PAYPAL_CLIENT_SECRET=...
+   PAYPAL_MERCHANT_EMAIL=<the Business account's sandbox email>
+   PAYPAL_API_BASE=https://api-m.sandbox.paypal.com   # the REST API host, NOT https://sandbox.paypal.com
+   ```
+5. Note the **Personal** account's sandbox email: that is who you invoice. It must not be the Business email.
+
+### 3. Optional: the AI parser
+```bash
+ollama pull gemma4:e2b-it-qat
+```
+Skip this and Mercury still works in rule-based "Basic mode" (single item per invoice).
+
+### 4. Run
+
+**Browser mode (no Rust):**
+```bash
+make dev-web        # then open http://localhost:1420
+```
+
+**Desktop app (global hotkey):**
+```bash
+make dev            # first build compiles Rust and takes a few minutes
+```
+Press **⌘⇧Space** from any app to open the palette (change it with `MERCURY_HOTKEY`, for example `Alt+Space`).
+
+### 5. Try it
+1. Type `Bill <buyer-sandbox-email> $1,200 for brand refresh and $300 for icons, net 15` and wait a moment.
+2. Check the preview, edit anything, press **⌘↵**.
+3. Click **Open**, log in at the payer page as the sandbox **Personal** account, and pay.
+4. Watch the palette's status pill change to **Paid** within a few seconds.
+
+Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round trip without the UI.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────┐
+│ Tauri v2 desktop shell (Rust)   │  or a plain browser │
+│  global hotkey · glass window   │                     │
+│  React 19 + TypeScript + Tailwind v4 + Motion        │
+└───────────────┬──────────────────────────────────────┘
+                │ HTTP 127.0.0.1:47891  (X-Mercury-Token)
+┌───────────────▼──────────────────────────────────────┐
+│ FastAPI backend (Python, httpx async)                │
+│  /api/parse   → Ollama (JSON schema) → grounding     │
+│                 └→ regex parser when the model fails │
+│  /api/invoice → PayPal create → send → link/status   │
+└───────────────┬───────────────────────┬──────────────┘
+                │                       │
+        Ollama (local)          PayPal Sandbox REST API
+```
+
+| Path | What lives there |
+| :--- | :--- |
+| `backend/app/services/paypal_service.py` | Token cache, create/send/status, idempotency, retries, error mapping |
+| `backend/app/services/grounding.py` | The checks that make AI output safe to act on |
+| `backend/app/services/ai_service.py` | Ollama client, JSON schema, LLM → regex orchestration |
+| `backend/app/services/regex_parser.py` | Deterministic fallback parser |
+| `frontend/src/hooks/usePalette.ts` | The palette state machine |
+| `frontend/src/components/` | Palette, preview card, success card with live status |
+| `frontend/src-tauri/src/lib.rs` | Hotkey, window show/hide, blur handling |
+| `scripts/` | `setup.sh`, `dev.sh`, `paypal_smoke.py`, `eval_parser.py` |
+
+## Tests
+
+```bash
+make test       # 153 backend tests (mocked PayPal and Ollama) + 20 frontend tests + type check
+make eval       # parse corpus against the real local model
+make smoke TO=<sandbox buyer email>   # real sandbox round trip
+```
+
+## Security notes
+- Sandbox only: the backend exits at startup if `PAYPAL_API_BASE` is not a sandbox REST host.
+- The backend binds to `127.0.0.1`, requires a shared token header on every route except `/api/health`, and only allows the app's own origins through CORS.
+- Secrets live in git-ignored `.env` files; nothing sensitive is logged.
+- The AI can only suggest: every value is verified against the user's text, and nothing is sent without the user pressing send on a visible preview.
+
+## Known limitations
+- macOS only for the desktop app (global shortcuts are unreliable on some Linux setups; Windows is untested).
+- Basic mode handles a single item per invoice.
+- Currencies are limited to USD, EUR, GBP, CAD and AUD (PayPal rejects decimals for zero-decimal currencies such as JPY).
+- Status polling runs while the success card is open and stops after 5 minutes or a final state.
+
+## License
+[MIT](LICENSE)
