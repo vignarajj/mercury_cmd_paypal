@@ -3,6 +3,7 @@ import { motion, type Variants } from "motion/react";
 import { AlertTriangle, CalendarClock, Coins, FileText, Mail, Plus, RotateCcw, Send, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { useCountUp } from "../hooks/useCountUp";
 import { CURRENCIES, MAX_ITEMS, dueOptions, formatMoney, lineCents, totalCents, validate, type Draft } from "../lib/invoice";
+import SelectField from "./SelectField";
 import SendProgress from "./SendProgress";
 
 const SYMBOL: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", CAD: "$", AUD: "$" };
@@ -61,7 +62,7 @@ export default function InvoicePreviewCard({ draft, source, warnings, showErrors
         </label>
         <div className="relative mb-3.5">
           <Mail size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
-          <input id="bill-to" ref={emailRef} className="field !pl-9" type="email" value={draft.client_email} disabled={locked}
+          <input id="bill-to" ref={emailRef} className="field pl-9" type="email" value={draft.client_email} disabled={locked}
             placeholder="client@company.com" aria-invalid={!!err("client_email") || emailMissing} aria-describedby={err("client_email") ? "bill-to-err" : undefined}
             onChange={(e) => onChange({ ...draft, client_email: e.target.value })} />
         </div>
@@ -79,11 +80,11 @@ export default function InvoicePreviewCard({ draft, source, warnings, showErrors
               <div key={n} className={`grid ${COLS} items-center gap-2`}>
                 <input className="field" value={it.name} disabled={locked} placeholder="What for?" aria-label={`Item ${n + 1} description`}
                   aria-invalid={!!err(`items.${n}.name`)} onChange={(e) => setItem(n, { name: e.target.value })} />
-                <input className="field !px-1 text-center tabular-nums" inputMode="numeric" value={it.quantity} disabled={locked} aria-label={`Item ${n + 1} quantity`}
+                <input className="field px-1 text-center tabular-nums" inputMode="numeric" value={it.quantity} disabled={locked} aria-label={`Item ${n + 1} quantity`}
                   aria-invalid={!!err(`items.${n}.quantity`)} onChange={(e) => setItem(n, { quantity: e.target.value })} />
                 <div className="relative">
                   <span aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-faint">{SYMBOL[draft.currency]}</span>
-                  <input className="field !pl-6 text-right tabular-nums" inputMode="decimal" value={it.unit_amount} disabled={locked} aria-label={`Item ${n + 1} unit price`}
+                  <input className="field pl-6 text-right tabular-nums" inputMode="decimal" value={it.unit_amount} disabled={locked} aria-label={`Item ${n + 1} unit price`}
                     aria-invalid={!!err(`items.${n}.unit_amount`)} onChange={(e) => setItem(n, { unit_amount: e.target.value })} />
                 </div>
                 <span className="text-right text-[13.5px] tabular-nums text-ink-dim" aria-label={`Item ${n + 1} amount`}>{line === null ? "–" : formatMoney(line, draft.currency)}</span>
@@ -108,21 +109,13 @@ export default function InvoicePreviewCard({ draft, source, warnings, showErrors
 
       <motion.div variants={item} className="mt-3.5 flex items-end justify-between gap-3">
         <div className="flex items-center gap-2">
-          <label className="relative">
-            <span className="sr-only">Currency</span>
-            <Coins size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
-            <select className="field !w-auto !pl-8" value={draft.currency} disabled={locked} onChange={(e) => onChange({ ...draft, currency: e.target.value })}>
-              {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </label>
-          <label className="relative">
-            <span className="sr-only">Payment terms</span>
-            <CalendarClock size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
-            <select className="field !w-auto !pl-8" value={draft.due_days ?? ""} disabled={locked}
-              onChange={(e) => onChange({ ...draft, due_days: e.target.value === "" ? null : Number(e.target.value) })}>
-              {dueOptions(draft.due_days).map((o) => <option key={o.label} value={o.value ?? ""}>{o.label}</option>)}
-            </select>
-          </label>
+          <SelectField label="Currency" icon={Coins} value={draft.currency} disabled={locked} onChange={(v) => onChange({ ...draft, currency: v })}>
+            {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+          </SelectField>
+          <SelectField label="Payment terms" icon={CalendarClock} value={draft.due_days ?? ""} disabled={locked}
+            onChange={(v) => onChange({ ...draft, due_days: v === "" ? null : Number(v) })}>
+            {dueOptions(draft.due_days).map((o) => <option key={o.label} value={o.value ?? ""}>{o.label}</option>)}
+          </SelectField>
         </div>
         <div className="text-right" aria-live="polite">
           <div className="text-[11.5px] font-medium uppercase tracking-wide text-ink-faint">Total due</div>
