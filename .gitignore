@@ -19,3 +19,7 @@ frontend/src-tauri/gen/
 .DS_Store
 .idea/
 .vscode/
+
+# local preferences written by Settings
+.mercury-prefs.json
+.vitest/

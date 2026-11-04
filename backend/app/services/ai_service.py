@@ -67,6 +67,7 @@ class OllamaClient:
         self._s = settings
         self._http = http
         self._schema = LLM_SCHEMA
+        self.model = settings.ollama_model  # can be changed at runtime from Settings
 
     def _messages(self, text: str) -> list[dict]:
         msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -76,7 +77,7 @@ class OllamaClient:
 
     async def extract(self, text: str) -> dict:
         payload = {
-            "model": self._s.ollama_model,
+            "model": self.model,
             "messages": self._messages(text),
             "stream": False,
             "format": self._schema,
@@ -105,13 +106,38 @@ class OllamaClient:
         try:
             resp = await self._http.post(
                 f"{self._s.ollama_base_url}/api/chat",
-                json={"model": self._s.ollama_model, "messages": [{"role": "user", "content": "ping"}],
+                json={"model": self.model, "messages": [{"role": "user", "content": "ping"}],
                       "stream": False, "keep_alive": "30m", "options": {"num_predict": 1}},
                 timeout=90,
             )
             return resp.status_code == 200
         except (httpx.HTTPError, TimeoutError):
             return False
+
+    async def installed_models(self) -> list[dict] | None:
+        """Local chat models installed in Ollama, or None when Ollama cannot be reached.
+
+        Cloud models (they run on ollama.com, so the text would leave this computer) and embedding-only
+        models are left out.
+        """
+        try:
+            resp = await self._http.get(f"{self._s.ollama_base_url}/api/tags", timeout=2)
+            raw = resp.json().get("models", [])
+        except (httpx.HTTPError, ValueError, TimeoutError):
+            return None
+        out = []
+        for m in raw:
+            name = m.get("name", "")
+            caps = m.get("capabilities")
+            if not name or m.get("remote_host") or name.endswith(":cloud"):
+                continue
+            if caps is not None and "completion" not in caps:
+                continue
+            if caps is None and "embed" in name:
+                continue
+            details = m.get("details") or {}
+            out.append({"name": name, "size_bytes": m.get("size"), "parameters": details.get("parameter_size") or None})
+        return sorted(out, key=lambda m: m["name"])
 
     async def health(self) -> str:
         """'ok' | 'model_missing' | 'offline'"""
@@ -120,7 +146,7 @@ class OllamaClient:
             names = [m.get("name", "") for m in resp.json().get("models", [])]
         except (httpx.HTTPError, ValueError, TimeoutError):
             return "offline"
-        want = self._s.ollama_model
+        want = self.model
         return "ok" if any(n == want or n.split(":")[0] == want.split(":")[0] and ":" not in want for n in names) else "model_missing"
 
 

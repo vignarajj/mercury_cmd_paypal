@@ -10,21 +10,25 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import Settings, get_settings
+from .config import DEFAULT_MODEL, Settings, get_settings
 from .errors import MercuryError
 from .models import (
-    LIST_STATUSES, InvoiceDetail, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, ParsedInvoice, ParseRequest,
+    LIST_STATUSES, InvoiceDetail, InvoiceList, InvoiceRequest, InvoiceResult, InvoiceStatus, ModelChoice, ParsedInvoice, ParseRequest,
 )
 from .services.ai_service import OllamaClient, ParseService
 from .services.paypal_service import PayPalService
+from .services.prefs import Preferences
 
 log = logging.getLogger("mercury")
 
 INVOICE_ID = Path(pattern=r"^[A-Za-z0-9-]{8,64}$", description="PayPal invoice id")
 
 
-def create_app(settings: Settings | None = None, http_client: httpx.AsyncClient | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, http_client: httpx.AsyncClient | None = None, prefs: Preferences | None = None,
+) -> FastAPI:
     s = settings or get_settings()
+    prefs = prefs or Preferences()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -32,6 +36,8 @@ def create_app(settings: Settings | None = None, http_client: httpx.AsyncClient 
         app.state.settings = s
         app.state.paypal = PayPalService(s, client)
         app.state.ollama = OllamaClient(s, client) if s.llm_provider == "ollama" else None
+        if app.state.ollama and prefs.ollama_model:  # the model picked in Settings wins over OLLAMA_MODEL
+            app.state.ollama.model = prefs.ollama_model
         app.state.parser = ParseService(app.state.ollama)
         warm = asyncio.create_task(app.state.ollama.warm_up()) if app.state.ollama else None
         yield
@@ -122,8 +128,40 @@ def create_app(settings: Settings | None = None, http_client: httpx.AsyncClient 
             "version": app.version,
             "paypal": {"status": paypal_state, "error": paypal_error, "host": s.paypal_api_base, "mode": "sandbox",
                        "merchant_email": s.merchant_email or None},
-            "llm": {"provider": s.llm_provider, "model": s.ollama_model if state.ollama else None, "status": llm_state},
+            "llm": {"provider": s.llm_provider, "model": state.ollama.model if state.ollama else None, "status": llm_state},
         }
+
+    async def model_state(request: Request) -> dict:
+        ollama = request.app.state.ollama
+        if ollama is None:
+            return {"provider": s.llm_provider, "status": "disabled", "current": None, "default": DEFAULT_MODEL,
+                    "base_url": None, "models": []}
+        models = await ollama.installed_models()
+        status = "offline" if models is None else await ollama.health()
+        return {"provider": "ollama", "status": status, "current": ollama.model, "default": DEFAULT_MODEL,
+                "base_url": s.ollama_base_url, "models": models or []}
+
+    @api.get("/models")
+    async def list_models(request: Request) -> dict:
+        """Models installed in the local Ollama, for the Settings picker."""
+        return await model_state(request)
+
+    @api.post("/model")
+    async def choose_model(body: ModelChoice, request: Request) -> dict:
+        """Switch the parsing model without restarting. Only locally installed models are accepted."""
+        ollama = request.app.state.ollama
+        if ollama is None:
+            raise MercuryError("LLM_DISABLED", "AI parsing is turned off (LLM_PROVIDER=none in backend/.env).", 409)
+        models = await ollama.installed_models()
+        if models is None:
+            raise MercuryError("LLM_OFFLINE", "Ollama isn't running. Start it, then choose a model.", 503, retryable=True)
+        if body.model not in {m["name"] for m in models}:
+            raise MercuryError("MODEL_NOT_INSTALLED",
+                               f"{body.model} isn't installed locally. Run: ollama pull {body.model}", 422)
+        ollama.model = body.model
+        prefs.set_ollama_model(body.model)
+        request.app.state.warm_task = asyncio.create_task(ollama.warm_up())  # load it now so the next invoice is not slow
+        return await model_state(request)
 
     @api.post("/invoice/{invoice_id}/send", response_model=InvoiceResult)
     async def resend_invoice(invoice_id: str = INVOICE_ID, svc: PayPalService = Depends(paypal)) -> InvoiceResult:

@@ -85,6 +85,10 @@ class InvoiceStatus(BaseModel):
 
 # ------------------------------------------------------------------ parsing
 
+class ModelChoice(BaseModel):
+    model: Annotated[str, Field(min_length=1, max_length=200)]
+
+
 class ParseRequest(BaseModel):
     text: Annotated[str, Field(min_length=1, max_length=1000)]
 
