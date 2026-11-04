@@ -5,34 +5,8 @@ import { useInvoiceStatus } from "../hooks/useInvoiceStatus";
 import { formatMoney } from "../lib/invoice";
 import { openExternal } from "../lib/tauri";
 import type { InvoiceResult } from "../lib/types";
+import InvoiceTimeline from "./InvoiceTimeline";
 import StatusPill, { isPaid } from "./StatusPill";
-
-const STEPS = ["Created", "Sent", "Paid"] as const;
-const stepOf = (s: string) => (isPaid(s) ? 2 : s === "DRAFT" ? 0 : 1);
-
-function Timeline({ status }: { status: string }) {
-  const at = stepOf(status);
-  const paid = isPaid(status);
-  return (
-    <ol className="mt-4 flex items-center" aria-label="Invoice progress">
-      {STEPS.map((label, i) => {
-        const done = i < at || paid;
-        const current = i === at && !paid;
-        return (
-          <li key={label} className="flex flex-1 items-center last:flex-none" aria-current={current ? "step" : undefined}>
-            <span className={`flex items-center gap-1.5 text-[12.5px] ${done ? "text-ink" : current ? "font-medium text-accent" : "text-ink-faint"}`}>
-              <span className={`grid size-[18px] place-items-center rounded-full border text-[10px] ${done ? "border-ok bg-ok text-accent-ink" : current ? "border-accent" : "border-line"}`}>
-                {done ? <Check size={11} strokeWidth={3} aria-hidden /> : current ? <motion.span className="size-2 rounded-full bg-accent" animate={{ opacity: [1, 0.35, 1] }} transition={{ repeat: Infinity, duration: 1.6 }} /> : null}
-              </span>
-              {label}
-            </span>
-            {i < STEPS.length - 1 && <span aria-hidden className={`mx-3 h-px flex-1 ${i < at || paid ? "bg-ok" : "bg-line"}`} />}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 function AnimatedCheck() {
   return (
@@ -70,7 +44,7 @@ export default function InvoiceSuccessCard({ result, copied, onCopy, onAnother, 
         <StatusPill status={status} live />
       </div>
 
-      <Timeline status={status} />
+      <InvoiceTimeline status={status} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button type="button" onClick={onCopy}
@@ -81,7 +55,7 @@ export default function InvoiceSuccessCard({ result, copied, onCopy, onAnother, 
         <button type="button" onClick={() => void openExternal(result.invoice_url)}
           className="flex items-center gap-2 rounded-xl bg-surface-2 px-3.5 py-2.5 text-[14px] font-medium transition hover:bg-line"><ExternalLink size={15} aria-hidden />Open</button>
         <button type="button" onClick={onAnother}
-          className="ml-auto flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-ink-dim transition hover:bg-surface-2 hover:text-ink"><Plus size={14} aria-hidden />Create another</button>
+          className="ml-auto flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-ink-dim transition hover:bg-surface-2 hover:text-ink"><Plus size={14} aria-hidden />Create another<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-dim">⌘N</span></button>
       </div>
     </motion.section>
   );

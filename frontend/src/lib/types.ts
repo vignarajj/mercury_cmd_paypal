@@ -23,3 +23,21 @@ export interface InvoiceResult {
 }
 
 export interface InvoiceStatus { invoice_id: string; status: string; paid_at: string | null }
+
+// ---- Dashboard (history, detail, settings)
+export interface InvoiceSummary {
+  invoice_id: string; number: string | null; status: string; client_email: string;
+  total: string; currency: string; created_at: string | null; invoice_url: string;
+}
+export interface InvoiceList { items: InvoiceSummary[]; page: number; page_size: number; total_items: number; total_pages: number }
+export interface InvoiceLine { name: string; quantity: string; unit_amount: string; amount: string }
+export interface PaymentRecord { payment_id: string | null; date: string | null; method: string | null; amount: string; status: string | null }
+export interface InvoiceDetail extends InvoiceSummary {
+  items: InvoiceLine[]; invoice_date: string | null; sent_at: string | null; due_date: string | null; payment_term: string | null;
+  note: string | null; paid_amount: string; due_amount: string | null; payments: PaymentRecord[];
+}
+export interface BackendInfo {
+  version: string;
+  paypal: { status: "ok" | "error"; error: string | null; host: string; mode: string; merchant_email: string | null };
+  llm: { provider: string; model: string | null; status: "ok" | "model_missing" | "offline" | "disabled" };
+}

@@ -22,7 +22,16 @@ shot() { # scene theme height
   echo "  $OUT/$1-$2.png"
 }
 
+shotw() { # scene theme width height  (wide windows: the Dashboard)
+  "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
+    --window-size="$3","$4" --virtual-time-budget=4500 \
+    --screenshot="$OUT/$1-$2.png" "$URL/?shots=$1&theme=$2" >/dev/null 2>&1
+  echo "  $OUT/$1-$2.png"
+}
+
 for theme in dark light; do
+  shotw dash-invoices "$theme" 1240 780
+  shotw dash-settings "$theme" 1240 900
   shot empty   "$theme" 430
   shot anatomy "$theme" 150
   shot reading "$theme" 290

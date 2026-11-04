@@ -35,6 +35,7 @@ type Action =
   | { type: "sendFail"; error: UiError }
   | { type: "back" }
   | { type: "dismissError" }
+  | { type: "newFrom"; text: string }
   | { type: "reset" };
 
 function reducer(s: State, a: Action): State {
@@ -54,7 +55,8 @@ function reducer(s: State, a: Action): State {
     case "edit": return s.failedInvoiceId ? s : { ...s, draft: a.draft, error: null };
     case "showErrors": return { ...s, showErrors: true };
     case "sendStart": return { ...s, phase: "sending", error: null };
-    case "sendOk": return { ...s, phase: "success", result: a.result, error: null, failedInvoiceId: null };
+    case "sendOk": return { ...s, phase: "success", result: a.result, text: "", error: null, failedInvoiceId: null }; // the sentence has done its job
+    case "newFrom": return { ...initial, text: a.text };
     case "sendFail": return { ...s, phase: "preview", error: a.error,
       failedInvoiceId: a.error.code === "SEND_FAILED" ? a.error.invoiceId ?? null : s.failedInvoiceId };
     case "back": return { ...s, phase: "idle", error: null };
@@ -106,6 +108,13 @@ export function usePalette(seed?: Partial<State>) {
   }, [state.text, state.phase, parse]);
 
   const setText = useCallback((text: string) => {
+    if (stateRef.current.phase === "success" && text) {
+      // typing over a finished invoice means "start another": no Esc needed
+      abortRef.current?.abort();
+      lastParsed.current = "";
+      dispatch({ type: "newFrom", text });
+      return;
+    }
     if (!looksParseable(text)) abortRef.current?.abort();
     dispatch({ type: "text", text });
   }, []);

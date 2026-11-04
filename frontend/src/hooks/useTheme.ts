@@ -20,5 +20,5 @@ export function useTheme() {
 
   const cycle = useCallback(() => setMode((m) => NEXT_MODE[m]), []);
   const resolved: "light" | "dark" = mode === "system" ? (systemDark ? "dark" : "light") : mode;
-  return { mode, resolved, cycle };
+  return { mode, resolved, cycle, setMode };
 }

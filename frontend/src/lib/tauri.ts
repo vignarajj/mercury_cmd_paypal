@@ -1,6 +1,12 @@
 // Thin wrappers so the same UI runs inside Tauri (hotkey window) and in a plain browser (web mode).
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+/** The label of the native window this page runs in ("main" palette or "dashboard"), or null in a browser. */
+export const nativeWindowLabel = (): string | null =>
+  (typeof window !== "undefined" &&
+    (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__?.metadata?.currentWindow?.label) ||
+  null;
+
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export async function hideWindow() {
@@ -56,4 +62,22 @@ export async function setNativeTheme(theme: "light" | "dark" | null) {
   if (!isTauri) return;
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
   await getCurrentWindow().setTheme(theme);
+}
+
+export interface AppInfo { version: string; hotkey: string; hotkey_registered: boolean; pinned: boolean; platform: string }
+
+async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<T>(cmd, args);
+}
+
+export const getAppInfo = (): Promise<AppInfo | null> => (isTauri ? call<AppInfo>("get_app_info") : Promise.resolve(null));
+export const setPinned = async (pinned: boolean) => { if (isTauri) await call("set_pinned", { pinned }); };
+export const quitApp = async () => { if (isTauri) await call("quit_app"); };
+export const showPalette = async () => { if (isTauri) await call("show_palette"); };
+
+/** Desktop: the Dashboard is its own window with normal controls. Browser: a new tab on the same app. */
+export async function openDashboard() {
+  if (isTauri) await call("open_dashboard");
+  else window.open(`${location.pathname}#/dashboard`, "_blank");
 }

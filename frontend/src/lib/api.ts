@@ -1,4 +1,5 @@
-import type { InvoiceResult, InvoiceStatus, ParsedInvoice } from "./types";
+import { invoiceQueryString, type InvoiceQuery } from "./format";
+import type { BackendInfo, InvoiceDetail, InvoiceList, InvoiceResult, InvoiceStatus, ParsedInvoice } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:47891";
 const TOKEN = import.meta.env.VITE_MERCURY_TOKEN ?? "";
@@ -43,4 +44,7 @@ export const api = {
   resend: (invoiceId: string) =>
     request<InvoiceResult>(`/api/invoice/${invoiceId}/send`, { method: "POST" }),
   status: (invoiceId: string) => request<InvoiceStatus>(`/api/invoice/${invoiceId}`),
+  invoices: (query: InvoiceQuery, signal?: AbortSignal) => request<InvoiceList>(`/api/invoices?${invoiceQueryString(query)}`, {}, signal),
+  invoiceDetail: (invoiceId: string, signal?: AbortSignal) => request<InvoiceDetail>(`/api/invoice/${invoiceId}/detail`, {}, signal),
+  info: (signal?: AbortSignal) => request<BackendInfo>("/api/info", {}, signal),
 };

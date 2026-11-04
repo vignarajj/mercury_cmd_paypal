@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { AlertTriangle, Check, CornerDownLeft, Loader2, Monitor, Moon, Sun, X } from "lucide-react";
+import { AlertTriangle, Check, CornerDownLeft, LayoutDashboard, Loader2, Monitor, Moon, Pin, PinOff, Sun, X } from "lucide-react";
 import { usePalette, type State } from "../hooks/usePalette";
+import { usePinned } from "../hooks/usePinned";
 import { useRecents } from "../hooks/useRecents";
 import { useTheme } from "../hooks/useTheme";
-import { copyText, hideWindow, isTauri, onPaletteShown, setWindowHeight } from "../lib/tauri";
+import { copyText, getAppInfo, hideWindow, isTauri, onPaletteShown, openDashboard, setWindowHeight } from "../lib/tauri";
 import EmptyState from "./EmptyState";
 import HighlightedInput from "./HighlightedInput";
 import InvoicePreviewCard from "./InvoicePreviewCard";
@@ -19,12 +20,14 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
   const { state } = p;
   const theme = useTheme();
   const recents = useRecents();
+  const pin = usePinned();
   const stateRef = useRef(state);
   stateRef.current = state;
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const hiddenAt = useRef<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const copyLink = useCallback(async () => {
     const url = stateRef.current.result?.invoice_url;
@@ -38,7 +41,7 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
   const escape = useCallback(() => {
     const s = stateRef.current;
     if (s.phase === "sending") return;
-    if (s.phase === "success") { p.reset(); void hideWindow(); return; }
+    if (s.phase === "success") { p.reset(); input.current?.focus(); return; } // stay open: ready for the next invoice
     if (s.phase === "preview" || s.phase === "parsing") { p.back(); input.current?.focus(); return; }
     if (s.text) { p.setText(""); return; }
     void hideWindow();
@@ -50,11 +53,20 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
       if (e.key === "Escape") { e.preventDefault(); escape(); }
       else if (mod && e.key === "Enter") { e.preventDefault(); void p.send(); }
       else if (mod && e.key.toLowerCase() === "c" && stateRef.current.phase === "success" && !window.getSelection()?.toString()) { e.preventDefault(); void copyLink(); }
+      else if (mod && e.key.toLowerCase() === "n" && stateRef.current.phase !== "sending") { e.preventDefault(); p.reset(); input.current?.focus(); }
+      else if (mod && e.key === ",") { e.preventDefault(); void openDashboard(); }
       else if (mod && e.key.toLowerCase() === "k" && !isTauri) { e.preventDefault(); input.current?.focus(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [escape, copyLink, p]);
+
+  // If another app owns the hotkey, say so instead of leaving the user guessing.
+  useEffect(() => {
+    void getAppInfo().then((info) => {
+      if (info && !info.hotkey_registered) setNotice(`The shortcut ${info.hotkey} is already used by another app. Use the menu-bar icon, or set MERCURY_HOTKEY (for example Alt+Space) and restart.`);
+    }).catch(() => {});
+  }, []);
 
   // A sent invoice joins the recents list.
   useEffect(() => { if (state.result) recents.add(state.result); }, [state.result, recents.add]);
@@ -95,6 +107,7 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
   return (
     <MotionConfig reducedMotion="user">
       <main ref={root} aria-label="Mercury Cmd" className="glass w-full max-w-[680px]">
+        {isTauri && <div data-tauri-drag-region aria-hidden className="absolute inset-x-0 top-0 z-10 h-3 cursor-grab" />}
         <div className="flex items-center gap-3 px-4 py-3.5">
           <span className="grid size-7 shrink-0 place-items-center" aria-hidden>
             {busy ? <Loader2 size={22} className="animate-spin text-accent" />
@@ -109,7 +122,7 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
               if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); void p.parse(state.text); }
               if (e.key === "ArrowDown" && showEmpty) { e.preventDefault(); document.querySelector<HTMLElement>("[data-nav]")?.focus(); }
             }}
-            placeholder="Describe an invoice, e.g. Bill client@acme.co $500 for logo design, net 15"
+            placeholder={state.phase === "success" ? "Type to start another invoice" : "Describe an invoice, e.g. Bill client@acme.co $500 for logo design, net 15"}
             aria-label="Describe the invoice"
           />
           {state.text && state.phase !== "sending" && (
@@ -142,6 +155,14 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
           )}
         </AnimatePresence>
 
+        {notice && !state.error && (
+          <div role="status" className="flex items-start gap-2 border-t border-line bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+            <AlertTriangle size={15} aria-hidden className="mt-0.5 shrink-0" />
+            <span className="flex-1">{notice}</span>
+            <button type="button" aria-label="Dismiss notice" onClick={() => setNotice(null)} className="text-warn/80 hover:text-warn"><X size={14} /></button>
+          </div>
+        )}
+
         <AnimatePresence>
           {state.error && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
@@ -155,14 +176,24 @@ export default function CommandPalette({ initial }: { initial?: Partial<State> }
           )}
         </AnimatePresence>
 
-        <footer className="flex items-center justify-between border-t border-line px-4 py-2 text-[12px] text-ink-faint">
+        <footer data-tauri-drag-region className="flex items-center justify-between border-t border-line px-4 py-2 text-[12px] text-ink-faint">
           <span className="flex items-center gap-3.5">
-            {state.phase === "success" ? (<><Hint k="⌘C" t="copy link" /><Hint k="esc" t="done" /></>)
+            {state.phase === "success" ? (<><Hint k="⌘C" t="copy link" /><Hint k="⌘N" t="new invoice" /><Hint k="esc" t="start over" /></>)
               : showCard ? (<><Hint k="⌘↵" t="send" /><Hint k="tab" t="next field" /><Hint k="esc" t="back" /></>)
               : showEmpty ? (<><Hint k="↵" t="read" icon /><Hint k="↓" t="examples" /><Hint k="esc" t="close" /></>)
               : (<><Hint k="↵" t="read" icon /><Hint k="esc" t={state.text ? "clear" : "close"} /></>)}
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
+            {isTauri && (
+              <button type="button" onClick={pin.toggle} aria-pressed={pin.pinned}
+                title={pin.pinned ? "Pinned: stays open when you click away" : "Pin: keep open when you click away"}
+                aria-label={pin.pinned ? "Unpin the palette" : "Pin the palette open"}
+                className={`grid size-6 place-items-center rounded-md transition hover:bg-surface-2 ${pin.pinned ? "bg-accent/15 text-accent" : "text-ink-dim hover:text-ink"}`}>
+                {pin.pinned ? <PinOff size={14} aria-hidden /> : <Pin size={14} aria-hidden />}
+              </button>
+            )}
+            <button type="button" onClick={() => void openDashboard()} title="Open the Dashboard (⌘,)" aria-label="Open the Dashboard"
+              className="grid size-6 place-items-center rounded-md text-ink-dim transition hover:bg-surface-2 hover:text-ink"><LayoutDashboard size={14} aria-hidden /></button>
             <button type="button" onClick={theme.cycle} title={`Theme: ${theme.mode}. Click for ${THEME_NEXT[theme.mode]}.`} aria-label={`Theme: ${theme.mode}. Switch to ${THEME_NEXT[theme.mode]}`}
               className="grid size-6 place-items-center rounded-md text-ink-dim transition hover:bg-surface-2 hover:text-ink"><ThemeIcon size={14} aria-hidden /></button>
             <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium tracking-wider text-ink-dim" title="No real money moves. All PayPal calls use the sandbox.">SANDBOX</span>
