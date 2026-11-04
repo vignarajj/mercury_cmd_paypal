@@ -59,7 +59,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | :-: | :--- | :--- | :--- | :---: |
 | 10 | Edit fields | Change description, quantity, unit price | Line amounts and total update | Automated, To verify (UI) |
 | 11 | Add and remove items | "Add item", trash icon | Rows change, total updates, last row cannot be removed | To verify |
-| 12 | Currency and terms | Use the two dropdowns | Symbols and terms change | To verify |
+| 12 | Currency and terms | Use the two dropdowns | Symbols and terms change, icon and chevron do not overlap the text | Live (layout, after a macOS fix), To verify (changing values) |
 | 13 | Validation | Clear the email or enter 0 | Field turns amber, send is blocked with a hint | Automated, To verify (UI) |
 | 14 | Back and clear | `Esc` in preview, `Esc` again | Back to the input, then cleared | Live |
 
@@ -80,7 +80,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | :-: | :--- | :--- | :--- | :---: |
 | 21 | Copy link | "Copy payment link" | Button shows "Link copied"; the link opens the payer page | Live (button and link), To verify (`⌘C`) |
 | 22 | Open link | "Open" | PayPal sandbox payer page opens in the browser | To verify |
-| 23 | **Buyer pays** | Open the link, log in as the sandbox buyer, pay | Pill changes to **Paid**, timeline completes, title becomes "Payment received" | Payment verified at PayPal (invoice `PAID`, transaction `SUCCESS`); recents flip to Paid from live data; open-card flip fixed after a polling bug, **re-test once** |
+| 23 | **Buyer pays** | Open the link, log in as the sandbox buyer, pay | Pill changes to **Paid**, timeline completes, title becomes "Payment received" | Live: payment verified at PayPal (invoice `PAID`, transaction `SUCCESS`), and the open card flips to Paid after the polling fix |
 | 24 | Recent invoices | Reload or reopen the palette | Last five invoices with live status, copy and open buttons | Live |
 | 25 | Start over | `Esc` or "Create another" | Palette resets | Live |
 
@@ -108,7 +108,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 
 ## 4. Known gaps
 
-- The Paid transition in the open success card (scenario 23) must be re-tested once after the polling fix: the first real payment completed after the old 5-minute polling window, so the card never updated. Polling now runs for an hour, backs off to 15 s, and re-checks on focus; a regression test covers it.
+- Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
 - Desktop-only behavior (31 to 37 except the hotkey opening the palette) needs a person at the Mac.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).
