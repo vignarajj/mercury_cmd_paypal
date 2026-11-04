@@ -18,6 +18,7 @@ const RESULT = (status: string) => ({ invoice_id: "INV2-K7QM-4XWB-9TCE-2RDL", in
 
 export const SCENES: Record<string, { initial?: Partial<State>; recents?: boolean }> = {
   empty: { recents: true },
+  anatomy: { initial: { text: "Bill sarah@studio.io $1,200 for brand refresh, net 30" } },
   reading: { initial: { text: TEXT, phase: "parsing" } },
   preview: { initial: { text: TEXT, phase: "preview", draft: DRAFT, source: "llm", warnings: [] } },
   sent: { initial: { text: TEXT, phase: "success", result: RESULT("SENT") } },

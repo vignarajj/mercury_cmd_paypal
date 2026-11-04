@@ -24,6 +24,7 @@ shot() { # scene theme height
 
 for theme in dark light; do
   shot empty   "$theme" 430
+  shot anatomy "$theme" 150
   shot reading "$theme" 290
   shot preview "$theme" 650
   shot sent    "$theme" 335

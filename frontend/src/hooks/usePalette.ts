@@ -76,7 +76,7 @@ export function usePalette(seed?: Partial<State>) {
   stateRef.current = state;
   const abortRef = useRef<AbortController | null>(null);
   const requestId = useRef(newId());
-  const lastParsed = useRef("");
+  const lastParsed = useRef(seed?.text?.trim() ?? ""); // seeded text (showcase scenes) is not re-parsed
 
   const parse = useCallback(async (text: string) => {
     const trimmed = text.trim();
