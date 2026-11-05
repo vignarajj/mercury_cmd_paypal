@@ -5,6 +5,7 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 **Status legend**
 - **Automated**: covered by tests that run with `make test` (mocked PayPal and Ollama).
 - **Live**: checked against the real PayPal sandbox and a real local model.
+- **Live (browser)**: driven by hand in the web build (`make dev-web`) against the real backend, PayPal sandbox and local model, on 5 Nov 2026. This covers what is inside the window, not the macOS shell.
 - **To verify**: not yet checked by a person in the running app.
 
 ---
@@ -55,16 +56,16 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 6 | No invented values | `bill them $100 for design work` | No email is made up; email flagged missing | Live, Automated |
 | 7 | Currencies | `Charge x@y.co €500 for logo design` | Currency set to EUR | Automated |
 | 8 | Basic mode | Stop Ollama, then parse | "Basic mode" badge, single item | Live (API), To verify (badge) |
-| 9 | Missing amount | `bill sarah@acme.co for logo design` | "Missing: amount. Click to add an item" | Automated, To verify (UI) |
+| 9 | Missing amount | `bill sarah@acme.co for logo design` | "Missing: amount. Click to add an item" | Automated, Live (browser) |
 
 ### Review it
 
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
-| 10 | Edit fields | Change description, quantity, unit price | Line amounts and total update | Automated, To verify (UI) |
-| 11 | Add and remove items | "Add item", trash icon | Rows change, total updates, last row cannot be removed | To verify |
+| 10 | Edit fields | Change description, quantity, unit price | Line amounts and total update | Automated, Live (browser) |
+| 11 | Add and remove items | "Add item", trash icon | Rows change, total updates, last row cannot be removed | Live (browser) |
 | 12 | Currency and terms | Use the two dropdowns | Symbols and terms change, icon and chevron do not overlap the text | Live (layout, after a macOS fix), To verify (changing values) |
-| 13 | Validation | Clear the email or enter 0 | Field turns amber, send is blocked with a hint | Automated, To verify (UI) |
+| 13 | Validation | Clear the email or enter 0 | Field turns amber, send is blocked with a hint | Automated, Live (browser: field flagged, send blocked; hint text not checked) |
 | 14 | Back and clear | `Esc` in preview, `Esc` again | Back to the input, then cleared | Live |
 
 ### Send it
@@ -74,7 +75,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 15 | Send | `⌘↵` | Authenticating, Creating draft, Sending, then the success card | Live |
 | 16 | Really sent | Look at the pill | "Awaiting payment", not "Scheduled" | Live |
 | 17 | Double send | Press `⌘↵` twice quickly | Exactly one invoice | Automated, Live (API) |
-| 18 | Own account | Use the merchant email | "That is your own business account. Use a different recipient." | Live (API), To verify (UI) |
+| 18 | Own account | Use the merchant email | "That is your own business account. Use a different recipient." | Live (API, browser) |
 | 19 | Backend down | Stop the backend, then parse or send | "Mercury's backend isn't running…" | Live |
 | 20 | Send fails after the draft | Force a send error | Draft kept, "Retry send" button, no second invoice | Automated, To verify (UI) |
 
@@ -82,7 +83,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
-| 21 | Copy link | "Copy payment link" | Button shows "Link copied"; the link opens the payer page | Live (button and link), To verify (`⌘C`) |
+| 21 | Copy link | "Copy payment link" | Button shows "Link copied"; the link opens the payer page | Live (button, link and `⌘C` in the browser) |
 | 22 | Open link | "Open" | PayPal sandbox payer page opens in the browser | To verify |
 | 23 | **Buyer pays** | Open the link, log in as the sandbox buyer, pay | Pill changes to **Paid**, timeline completes, title becomes "Payment received" | Live: payment verified at PayPal (invoice `PAID`, transaction `SUCCESS`), and the open card flips to Paid after the polling fix |
 | 24 | Recent invoices | Reload or reopen the palette | Last five invoices with live status, copy and open buttons | Live |
@@ -93,7 +94,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
 | 26 | Dark and light | Switch the system appearance | Both themes render correctly | Live (browser) |
-| 27 | Theme toggle | Click the sun, moon or monitor icon in the footer | Cycles system, light, dark and remembers it | To verify |
+| 27 | Theme toggle | Click the sun, moon or monitor icon in the footer | Cycles system, light, dark and remembers it | Live (browser: light to dark, kept after reload) |
 | 28 | Keyboard only | `Tab`, arrow keys through examples, `⌘↵`, `Esc` | Everything reachable, visible focus ring | Automated, To verify (manual) |
 | 29 | Contrast and labels | `make test` | 24 contrast and 6 accessibility checks pass | Automated |
 | 30 | Reduced motion | Enable it in the system settings | Animations are skipped | To verify |
@@ -116,7 +117,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | :-: | :--- | :--- | :--- | :---: |
 | 38 | Box is ready for the next one | Send an invoice | The input is empty and says "Type to start another invoice" | Automated |
 | 39 | Typing starts a new invoice | Type a new sentence over the success card | The old card fades out and the new sentence is read, no Esc needed | Automated |
-| 40 | Esc starts over | Press `Esc` on the success card | The palette stays open on the empty state; a second `Esc` hides it | Automated, To verify (desktop hide) |
+| 40 | Esc starts over | Press `Esc` on the success card | The palette stays open on the empty state; a second `Esc` hides it | Automated, Live (browser: first `Esc`), To verify (desktop hide) |
 | 41 | New invoice shortcut | `⌘N` from any state except sending | Back to the empty state, input focused | Automated |
 | 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | To verify (desktop) |
 | 43 | Move it | Drag the top edge or the footer | The window moves | To verify (desktop) |
@@ -134,7 +135,7 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 | 48 | Filters and search | Click a status chip; type an email or number | The list narrows; search waits for a pause in typing | Live (API), Automated |
 | 49 | Paging | Use the next and previous arrows | Pages of 10 with the visible range | Automated |
 | 50 | Invoice detail | Click an invoice | Items, totals, paid and balance, dates, terms, payments with transaction ID, timeline | Live (browser) |
-| 51 | Copy and open from detail | "Copy payment link", "Open payer page", "Copy ID" | Link copied; payer page opens | To verify |
+| 51 | Copy and open from detail | "Copy payment link", "Open payer page", "Copy ID" | Link copied; payer page opens | Live (browser: detail and buttons), To verify (clipboard, payer page) |
 | 52 | Settings health | Open **Settings** | PayPal, AI model and backend status, live | Live (browser) |
 | 53 | Theme control | System, Light, Dark | The whole Dashboard switches and remembers it | Live (browser), Automated |
 | 54 | Backend offline | Stop the backend and open the Dashboard | A clear message and a Try again button | Automated |
@@ -149,5 +150,7 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 
 - Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
 - Desktop-only behavior (31 to 37 except the hotkey opening the palette, and 40, 42 to 46, 55) needs a person at the Mac.
+- The warning "An item had an unreadable amount and was ignored." stays on the preview after you fix the amount yourself. It is accurate about the first read but looks stale; found on 5 Nov 2026 while checking scenario 9.
+- The first read after the model has been idle took about 15 seconds on 5 Nov 2026 (model load); later reads are 2 to 3 seconds.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).
