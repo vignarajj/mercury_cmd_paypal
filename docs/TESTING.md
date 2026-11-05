@@ -20,10 +20,10 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Backend, parsing (`test_parse.py`) | 112 | 33-case corpus through the rule-based parser and through grounding; hallucinated email and amount dropped; fallback when Ollama fails, is slow or returns junk |
 | Frontend logic (`invoice`, `entities`, `recents`, `format`) | 50 | Exact money math, validation, request building, entity highlighting, recents store, history filters and query building, dates and labels |
 | Frontend status polling (`useInvoiceStatus`) | 6 | Polls for an hour with backoff, keeps going past five minutes, re-checks on focus, stops at a final status |
-| Frontend palette flow (`palette.flow.test.tsx`) | 6 | Box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
+| Frontend palette flow (`palette.flow.test.tsx`) | 7 | Parse warnings clear once you edit the preview, box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
 | Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 34 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, AI model picker (switch, failure, unavailable models with reasons, cloud opt-in and fallback, setup guide, Ollama off, AI disabled), theme and clearing recents |
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
-| **Total** | **297** | Backend 177, frontend 120, plus a clean TypeScript check |
+| **Total** | **298** | Backend 177, frontend 121, plus a clean TypeScript check |
 
 Related commands: `make eval` (parse corpus against the real model), `make smoke TO=<buyer email>` (real PayPal round trip), `make shots` (regenerate screenshots).
 
@@ -150,7 +150,6 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 
 - Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
 - Desktop-only behavior (31 to 37 except the hotkey opening the palette, and 40, 42 to 46, 55) needs a person at the Mac.
-- The warning "An item had an unreadable amount and was ignored." stays on the preview after you fix the amount yourself. It is accurate about the first read but looks stale; found on 5 Nov 2026 while checking scenario 9.
 - The first read after the model has been idle took about 15 seconds on 5 Nov 2026 (model load); later reads are 2 to 3 seconds.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).

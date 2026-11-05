@@ -52,7 +52,9 @@ function reducer(s: State, a: Action): State {
         failedInvoiceId: null, showErrors: false, result: null };
     }
     case "parseFail": return { ...s, phase: s.draft ? "preview" : "idle", error: a.error };
-    case "edit": return s.failedInvoiceId ? s : { ...s, draft: a.draft, error: null };
+    // Parse warnings describe what was read from the sentence. Once the person edits the preview they have taken over,
+    // so a note like "an amount was ignored" would only be stale.
+    case "edit": return s.failedInvoiceId ? s : { ...s, draft: a.draft, warnings: [], error: null };
     case "showErrors": return { ...s, showErrors: true };
     case "sendStart": return { ...s, phase: "sending", error: null };
     case "sendOk": return { ...s, phase: "success", result: a.result, text: "", error: null, failedInvoiceId: null }; // the sentence has done its job

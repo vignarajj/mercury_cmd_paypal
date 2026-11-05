@@ -36,6 +36,19 @@ async function sendOne() {
   await screen.findByLabelText("Invoice sent", {}, { timeout: 4000 });
 }
 
+describe("parse warnings", () => {
+  it("are shown after reading and disappear once you edit the preview", async () => {
+    vi.mocked(api.parse).mockResolvedValueOnce({ ...PARSED, warnings: ["An item had an unreadable amount and was ignored."] });
+    render(<CommandPalette />);
+    fireEvent.change(input(), { target: { value: "bill buyer@personal.example.com for logo design" } });
+    fireEvent.keyDown(input(), { key: "Enter" });
+    await screen.findByLabelText("Invoice preview");
+    expect(screen.getByText("An item had an unreadable amount and was ignored.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Item 1 unit price"), { target: { value: "150" } });
+    await waitFor(() => expect(screen.queryByText("An item had an unreadable amount and was ignored.")).toBeNull());
+  });
+});
+
 describe("after an invoice is sent", () => {
   it("clears the old sentence so the box is ready for the next one", async () => {
     render(<CommandPalette />);

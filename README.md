@@ -172,7 +172,7 @@ Prefer the command line? `make smoke TO=<buyer-email>` runs the raw PayPal round
 ## Tests
 
 ```bash
-make test       # 177 backend tests (mocked PayPal and Ollama) + 120 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
+make test       # 177 backend tests (mocked PayPal and Ollama) + 121 frontend tests (logic, Dashboard, axe accessibility, WCAG contrast) + type check
 make eval       # parse corpus against the real local model
 make smoke TO=<sandbox buyer email>   # real sandbox round trip
 make shots      # regenerate the README screenshots and cover (needs Google Chrome)
