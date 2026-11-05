@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Notes</title>
+<!--
+  Backdrop for the Mercury Cmd demo video. A made-up notes app with no third-party logos or brands.
+  Open it in a browser, then press the Mercury Cmd shortcut over it.
+
+  Use your own sandbox buyer so the invoice can be paid on camera:
+    studio-notes.html?email=<your sandbox buyer email>
+  Without it the page shows a placeholder address.
+-->
+<style>
+  :root {
+    --bg: #f4f1ec; --panel: #fbf9f6; --side: #ece7df; --line: #ddd5c9;
+    --ink: #2b2620; --dim: #6c6358; --faint: #968c7e; --accent: #b4532a; --mark: #f6dfa8; --chip: #e5dccf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1916; --panel: #23201c; --side: #1f1c19; --line: #38332c;
+      --ink: #ece6dc; --dim: #a79d8f; --faint: #7d7468; --accent: #e08a5f; --mark: #5a4a22; --chip: #322d26;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    display: grid; grid-template-columns: 260px 1fr; min-height: 100vh;
+  }
+  aside { background: var(--side); border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 18px; font-weight: 650; font-size: 16px; letter-spacing: -.01em; }
+  .brand i { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 14px; }
+  .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 14px 8px 6px; }
+  .note { padding: 9px 10px; border-radius: 9px; color: var(--dim); font-size: 14px; line-height: 1.35; }
+  .note b { display: block; color: var(--ink); font-weight: 560; }
+  .note.on { background: var(--panel); border: 1px solid var(--line); color: var(--dim); }
+  main { padding: 54px clamp(28px, 7vw, 110px); overflow: auto; }
+  article { max-width: 700px; }
+  .crumbs { color: var(--faint); font-size: 13px; margin-bottom: 14px; }
+  h1 { font-size: 34px; line-height: 1.15; letter-spacing: -.02em; margin: 0 0 6px; font-weight: 700; }
+  .meta { color: var(--dim); font-size: 13.5px; margin-bottom: 30px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 12.5px; color: var(--dim); }
+  h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 30px 0 8px; font-weight: 600; }
+  p { margin: 0 0 12px; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin: 14px 0; }
+  .card p:last-child { margin: 0; }
+  mark { background: var(--mark); color: inherit; border-radius: 4px; padding: 0 3px; }
+  .todo { display: flex; gap: 10px; align-items: baseline; }
+  .todo span { width: 14px; height: 14px; border: 1.5px solid var(--faint); border-radius: 4px; flex: none; transform: translateY(2px); }
+  .hint { color: var(--faint); font-size: 13px; margin-top: 34px; }
+  @media (max-width: 760px) { body { grid-template-columns: 1fr; } aside { display: none; } main { padding: 32px 22px; } }
+</style>
+</head>
+<body>
+  <aside aria-label="Notes">
+    <div class="brand"><i aria-hidden="true">✎</i>Studio Notes</div>
+    <div class="label">Today</div>
+    <div class="note on"><b>Harbor &amp; Pine: brand refresh</b>Kickoff call, scope and fees</div>
+    <div class="note"><b>Conference talk outline</b>Slides and speaker notes</div>
+    <div class="label">This week</div>
+    <div class="note"><b>Packaging concepts</b>Three directions to show Thursday</div>
+    <div class="note"><b>Invoice follow-ups</b>Who owes what</div>
+    <div class="label">Reference</div>
+    <div class="note"><b>Rate card</b>Day rates and retainers</div>
+  </aside>
+
+  <main>
+    <article>
+      <div class="crumbs">Clients / Harbor &amp; Pine</div>
+      <h1>Harbor &amp; Pine: brand refresh</h1>
+      <div class="meta"><span class="chip">Kickoff done</span><span>Edited today</span></div>
+
+      <h2>Contact</h2>
+      <p>Maya Reyes, owner. Prefers email over calls.</p>
+      <p><mark id="email">maya@harborandpine.example</mark></p>
+
+      <h2>What we agreed</h2>
+      <ul>
+        <li>New logo and a simple colour palette for the shop and its packaging.</li>
+        <li>A small icon set for the website: about six icons.</li>
+        <li>Two rounds of changes, then hand-over of the files.</li>
+      </ul>
+
+      <h2>Fees</h2>
+      <div class="card">
+        <p>Brand refresh: <mark>$1,200</mark></p>
+        <p>Icon set: <mark>$300</mark></p>
+        <p>Payment terms: net 30.</p>
+      </div>
+
+      <h2>After the call</h2>
+      <p class="todo"><span></span>Send Maya the moodboard link</p>
+      <p class="todo"><span></span><b>Invoice for the brand refresh and the icons</b></p>
+      <p class="todo"><span></span>Book the second review for next Tuesday</p>
+
+      <p class="hint">Tip: say it the way you would to a colleague. “Invoice maya for the brand refresh, $1,200, and the icons, $300, net 30.”</p>
+    </article>
+  </main>
+
+  <script>
+    // ?email=you@example.com swaps the placeholder address everywhere it appears, so the demo uses your sandbox buyer.
+    (function () {
+      var e = new URLSearchParams(location.search).get("email");
+      if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return;
+      document.getElementById("email").textContent = e;
+    })();
+  </script>
+</body>
+</html>
