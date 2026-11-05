@@ -150,6 +150,6 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 
 - Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
 - Desktop-only behavior (31 to 37 except the hotkey opening the palette, and 40, 42 to 46, 55) needs a person at the Mac.
-- The first read after the model has been idle took about 15 seconds on 5 Nov 2026 (model load); later reads are 2 to 3 seconds.
+- The first read after the model has been idle took about 15 seconds on 5 Nov 2026 (model load); later reads were 3 to 5 seconds. Past the 8-second limit a read falls back to Basic mode.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).

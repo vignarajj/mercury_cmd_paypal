@@ -55,7 +55,7 @@ Real-world quirks found against the live sandbox and handled in code (see `mercu
 - **Model:** a local [Ollama](https://ollama.com) model (`gemma4:e2b-it-qat` by default) with **JSON-schema structured output** and temperature 0. No data leaves the machine, unless you opt in to Ollama's cloud models in Settings (off by default).
 - **Grounding layer** (`backend/app/services/grounding.py`): every value must be backed by the user's text or it is dropped with a visible warning.
 - **Evaluation:** `make eval` runs a 33-case corpus through the real model (33/33) and through the regex fallback (30/30 on the cases it supports). The corpus is developer-written, so it is a regression suite, not an unbiased benchmark.
-- **Latency:** about 2 to 3 s per parse once the model is loaded (the first parse after a cold start can take about 10 s; the backend warms the model at startup).
+- **Latency:** a few seconds per parse once the model is loaded (3 to 5 s on the development Mac). The first parse after the model has been idle can take 10 to 15 s; past the 8-second limit that one read falls back to Basic mode. The backend warms the model at startup.
 
 ---
 
@@ -109,7 +109,7 @@ The same steps, with copy buttons, are in **Settings → AI model → How to set
 - **Cloud models are off by default.** Models whose names end in `:cloud` run on ollama.com, so the sentence you type would leave your computer. They are listed greyed out until you turn on **Settings → AI model → Cloud models**. Then they appear in the model list marked "cloud", the AI model section says so while one is selected, and turning the switch off again returns you to a local model at once. Cloud models need an Ollama account (`ollama signin`). The recorded demo and the 33-case evaluation use the local model only.
 - Only `gemma4:e2b-it-qat` has been checked against the 33-case corpus. With another model, read the preview before sending, or measure it with `OLLAMA_MODEL=<name> make eval`.
 - Ollama on a different machine or port: set `OLLAMA_BASE_URL` in `backend/.env` and restart the backend.
-- The first read after starting can take about 10 seconds while the model loads; later ones take 2 to 3 seconds.
+- The first read after the model has been idle can take 10 to 15 seconds while it loads, and if it passes 8 seconds that read uses Basic mode. Later ones take a few seconds.
 
 ### 4. Run
 

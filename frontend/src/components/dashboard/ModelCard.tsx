@@ -70,7 +70,7 @@ function OllamaGuide({ state }: { state: ModelState }) {
       <div className="mt-4 space-y-1.5 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-ink-dim">
         <p><span className="font-medium text-ink">Want a different model?</span> Run <span className="font-mono text-ink">ollama pull &lt;name&gt;</span>, press Check again, and choose it above. Any local chat model is listed. Embedding models never are, and cloud models appear only after you turn them on.</p>
         <p><span className="font-medium text-ink">Ollama on another address?</span> Set <span className="font-mono text-ink">OLLAMA_BASE_URL</span> in <span className="font-mono text-ink">backend/.env</span> and restart the backend. Currently: <span className="font-mono text-ink">{state.base_url ?? "http://localhost:11434"}</span></p>
-        <p><span className="font-medium text-ink">Slow first invoice?</span> The first read after starting can take about 10 seconds while the model loads. Later ones take 2 to 3 seconds.</p>
+        <p><span className="font-medium text-ink">Slow first invoice?</span> The first read after the model has been idle can take 10 to 15 seconds while it loads, and past 8 seconds that read uses Basic mode. Later ones take a few seconds.</p>
       </div>
     </details>
   );
