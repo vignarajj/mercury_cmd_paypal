@@ -5,7 +5,7 @@ use serde::Serialize;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
+    AppHandle, Emitter, LogicalPosition, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -31,16 +31,47 @@ fn is_pinned(app: &AppHandle) -> bool {
     app.state::<AppState>().pinned.load(Ordering::Relaxed)
 }
 
-/// Put the palette near the top third of the display the mouse is on (multi-monitor friendly).
+/// A display in logical points, the unit macOS positions windows in. The origin is the top-left of the primary display.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Area {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+}
+
+/// Where a palette of size `win` goes: centred across the display that holds `cursor`, a fifth of the way down.
+fn palette_origin(cursor: (f64, f64), areas: &[Area], win: (f64, f64)) -> Option<(f64, f64)> {
+    let a = areas
+        .iter()
+        .find(|a| cursor.0 >= a.x && cursor.0 < a.x + a.w && cursor.1 >= a.y && cursor.1 < a.y + a.h)?;
+    Some((a.x + (a.w - win.0) / 2.0, a.y + a.h * 0.2))
+}
+
+/// Put the palette near the top of the display the mouse is on (multi-monitor friendly).
+///
+/// Everything here is worked out in logical points. On macOS tao reports the cursor in physical pixels of the
+/// primary display but each display's bounds in points, and each display's own position and size in that display's
+/// pixels. Mixing them puts the palette on the wrong display, or half off the screen, when the displays have
+/// different scale factors (for example a Retina laptop next to an external monitor).
 fn place_on_cursor_monitor(app: &AppHandle, w: &WebviewWindow) {
     let placed = (|| -> Option<()> {
-        let cursor = app.cursor_position().ok()?;
-        let monitor = app.monitor_from_point(cursor.x, cursor.y).ok()??;
-        let size = w.outer_size().ok()?;
-        let (pos, area) = (monitor.position(), monitor.size());
-        let x = pos.x + (area.width as i32 - size.width as i32) / 2;
-        let y = pos.y + (area.height as f64 * 0.2) as i32;
-        w.set_position(PhysicalPosition::new(x, y)).ok()
+        let primary_scale = app.primary_monitor().ok()??.scale_factor();
+        let c = app.cursor_position().ok()?;
+        let cursor = (c.x / primary_scale, c.y / primary_scale);
+        let areas: Vec<Area> = app
+            .available_monitors()
+            .ok()?
+            .iter()
+            .map(|m| {
+                let (s, p, z) = (m.scale_factor(), m.position(), m.size());
+                Area { x: p.x as f64 / s, y: p.y as f64 / s, w: z.width as f64 / s, h: z.height as f64 / s }
+            })
+            .collect();
+        let (size, scale) = (w.outer_size().ok()?, w.scale_factor().ok()?);
+        let win = (size.width as f64 / scale, size.height as f64 / scale);
+        let (x, y) = palette_origin(cursor, &areas, win)?;
+        w.set_position(LogicalPosition::new(x, y)).ok()
     })();
     if placed.is_none() {
         let _ = w.center();
@@ -249,4 +280,53 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Mercury Cmd");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PALETTE: (f64, f64) = (680.0, 270.0);
+
+    // A Retina laptop (1512x982 points) with a 1920x1080 monitor to its right, as laid out on a real desk.
+    fn laptop_and_monitor() -> [Area; 2] {
+        [Area { x: 0.0, y: 0.0, w: 1512.0, h: 982.0 }, Area { x: 1512.0, y: 155.0, w: 1920.0, h: 1080.0 }]
+    }
+
+    #[test]
+    fn centres_on_a_single_display() {
+        let areas = [Area { x: 0.0, y: 0.0, w: 1512.0, h: 982.0 }];
+        let (x, y) = palette_origin((300.0, 200.0), &areas, PALETTE).unwrap();
+        assert_eq!(x, 416.0);
+        assert!((y - 196.4).abs() < 0.01);
+    }
+
+    #[test]
+    fn right_half_of_the_laptop_stays_on_the_laptop() {
+        // This cursor position used to be read as being on the external monitor, which pushed the palette off the edge.
+        let (x, _) = palette_origin((1200.0, 400.0), &laptop_and_monitor(), PALETTE).unwrap();
+        assert_eq!(x, 416.0);
+        assert!(x + PALETTE.0 <= 1512.0);
+    }
+
+    #[test]
+    fn centres_on_the_external_monitor() {
+        let (x, y) = palette_origin((2600.0, 600.0), &laptop_and_monitor(), PALETTE).unwrap();
+        assert_eq!(x, 2132.0);
+        assert!((y - (155.0 + 216.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn display_above_the_primary_one() {
+        let areas = [Area { x: 0.0, y: 0.0, w: 1512.0, h: 982.0 }, Area { x: 0.0, y: -1080.0, w: 1920.0, h: 1080.0 }];
+        let (x, y) = palette_origin((900.0, -500.0), &areas, PALETTE).unwrap();
+        assert_eq!(x, 620.0);
+        assert!((y - (-1080.0 + 216.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn cursor_outside_every_display_gives_nothing() {
+        assert_eq!(palette_origin((9000.0, 9000.0), &laptop_and_monitor(), PALETTE), None);
+        assert_eq!(palette_origin((10.0, 10.0), &[], PALETTE), None);
+    }
 }
