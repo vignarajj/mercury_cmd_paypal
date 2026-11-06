@@ -111,7 +111,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 34 | Menu-bar icon | Look at the menu bar | Icon appears; click toggles; right-click shows Open and Quit | Live (desktop: icon appears, a click toggles the palette, right-click shows the menu) |
 | 35 | Native glass and theme | Switch appearance, use the theme toggle | Blur and tint follow dark and light | Live (desktop) |
 | 36 | No Dock icon | Look at the Dock | App does not appear there | Live (desktop, 5 Nov 2026: not in the Dock, and macOS reports it as a UI element) |
-| 37 | Custom hotkey | Set `MERCURY_HOTKEY=Alt+Space` and restart | New shortcut works | To verify |
+| 37 | Custom hotkey | Set `MERCURY_HOTKEY=Alt+Space` and restart | New shortcut works | Live (desktop, 6 Nov 2026: `Control+Alt+M` opens the palette, the default no longer does, the tray menu shows it) |
 
 ### Palette flow (after a sent invoice)
 
@@ -124,7 +124,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | Live (desktop: stays open when you click another app, hides again after unpinning) |
 | 43 | Move it | Drag the top edge or the footer | The window moves | Live (desktop) |
 | 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | Automated (placement maths, 5 Rust tests), Live (desktop, 6 Nov 2026: both halves and the corner of the laptop screen and both sides of an external monitor, after the fix for mixed-resolution displays) |
-| 45 | Hotkey already taken | Set `MERCURY_HOTKEY` to a shortcut another app owns | The app still starts, the menu-bar icon works, a notice explains | To verify (desktop) |
+| 45 | Shortcut cannot be registered | Set `MERCURY_HOTKEY` to something invalid, for example `not-a-shortcut` | The app still starts, the reason is logged, the menu-bar icon works, a notice explains | Live (desktop, 6 Nov 2026: the app keeps running and logs the reason, the palette shows the notice, Settings shows "In use by another app") |
 
 ### Dashboard (full window)
 
@@ -141,7 +141,7 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 | 52 | Settings health | Open **Settings** | PayPal, AI model and backend status, live | Live (browser) |
 | 53 | Theme control | System, Light, Dark | The whole Dashboard switches and remembers it | Live (browser), Automated |
 | 54 | Backend offline | Stop the backend and open the Dashboard | A clear message and a Try again button | Automated |
-| 55 | Keep palette open, Quit | Settings, Palette and About cards | Switch pins the palette; Quit closes the app | To verify (desktop) |
+| 55 | Keep palette open, Quit | Settings, Palette and About cards | Switch pins the palette; Quit closes the app | Live (desktop, 6 Nov 2026) |
 | 56 | Choose the AI model | **Settings → AI model**, pick another installed model | "Now using …"; the next parse uses it; it is still selected after restarting the backend | Automated, Live (list, API) |
 | 57 | Model setup guide | Open **Settings → AI model**; also stop Ollama or remove the model | A four-step guide (install, run, pull, check) with copy buttons; it opens by itself when no model is ready | Automated, Live (browser) |
 | 58 | Models you cannot use | Look under the model picker | "N other models in Ollama can't be used here", each with its reason (cloud or embedding) | Automated, Live (browser) |
@@ -151,7 +151,8 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 ## 4. Known gaps
 
 - Payment is now verified end to end in the sandbox. The first attempt exposed a polling bug (the card stopped checking after five minutes), which is fixed and covered by regression tests.
-- Desktop-only behavior (31 to 37 except the hotkey opening the palette, and 40, 42 to 46, 55) needs a person at the Mac.
+- Desktop-only behavior needs a person at the Mac. Most of it was checked by hand on 6 Nov 2026 (rows 32 to 37, 40, 42 to 46 and 55). Still to check by hand: the sent invoice staying on screen after the palette hides (32), and the Open and clipboard buttons (22, 51).
+- macOS lets several apps register the same shortcut without an error, so Mercury cannot tell when another app already uses its shortcut. It only reports a shortcut that cannot be registered at all, such as an invalid `MERCURY_HOTKEY`. Changing the shortcut with `MERCURY_HOTKEY` is the way around a clash.
 - The first read after the model has been idle took about 15 seconds on 5 Nov 2026 (model load); later reads were 3 to 5 seconds. Past the 8-second limit a read falls back to Basic mode.
 - `Retry send` is covered by service tests but not yet exercised through the UI.
 - The rule-based parser handles one item per invoice; this is by design (see README).
