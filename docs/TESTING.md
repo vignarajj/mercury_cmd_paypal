@@ -104,11 +104,11 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
 | 31 | Hotkey | `⌘⇧Space` from another app | Palette appears with the input focused | Live |
-| 32 | Hide | Press the hotkey again, press `Esc` on an empty input, or click another app | Palette hides, a sent invoice stays on screen when you return | To verify |
+| 32 | Hide | Press the hotkey again, press `Esc` on an empty input, or click another app | Palette hides, a sent invoice stays on screen when you return | Live (desktop: hotkey opens it, `Esc` on an empty input hides it), To verify (hotkey toggle, click away, sent invoice on return) |
 | 33 | Resize | Type a sentence and wait | Window grows to fit the preview | To verify |
 | 34 | Menu-bar icon | Look at the menu bar | Icon appears; click toggles; right-click shows Open and Quit | To verify |
 | 35 | Native glass and theme | Switch appearance, use the theme toggle | Blur and tint follow dark and light | To verify |
-| 36 | No Dock icon | Look at the Dock | App does not appear there | To verify |
+| 36 | No Dock icon | Look at the Dock | App does not appear there | Live (desktop, 5 Nov 2026: not in the Dock, and macOS reports it as a UI element) |
 | 37 | Custom hotkey | Set `MERCURY_HOTKEY=Alt+Space` and restart | New shortcut works | To verify |
 
 ### Palette flow (after a sent invoice)
@@ -121,7 +121,7 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 41 | New invoice shortcut | `⌘N` from any state except sending | Back to the empty state, input focused | Automated |
 | 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | To verify (desktop) |
 | 43 | Move it | Drag the top edge or the footer | The window moves | To verify (desktop) |
-| 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | To verify (desktop) |
+| 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | Live (desktop, mouse on the external display: centred on it, about a fifth of the way down), To verify (built-in display) |
 | 45 | Hotkey already taken | Set `MERCURY_HOTKEY` to a shortcut another app owns | The app still starts, the menu-bar icon works, a notice explains | To verify (desktop) |
 
 ### Dashboard (full window)
