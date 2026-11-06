@@ -89,7 +89,21 @@ def create_app(
 
     @api.post("/parse", response_model=ParsedInvoice)
     async def parse(body: ParseRequest, request: Request) -> ParsedInvoice:
-        return await request.app.state.parser.parse(body.text)
+        # The palette reads while you type and drops its previous request on every pause, but a dropped request keeps
+        # the model busy. A slow typist queued a dozen half-typed sentences ahead of the real one, which then ran past
+        # the time limit and fell back to Basic mode. Only the newest read matters, so a new one cancels the old one.
+        state = request.app.state
+        previous = getattr(state, "parse_task", None)
+        if previous is not None and not previous.done():
+            previous.cancel()
+        task = asyncio.create_task(state.parser.parse(body.text))
+        state.parse_task = task
+        try:
+            return await task
+        except asyncio.CancelledError:
+            if state.parse_task is task:
+                raise  # this request itself was cancelled (shutdown), not replaced
+            raise MercuryError("PARSE_SUPERSEDED", "A newer read replaced this one.", 409) from None
 
     @api.post("/invoice", response_model=InvoiceResult)
     async def create_invoice(body: InvoiceRequest, svc: PayPalService = Depends(paypal)) -> InvoiceResult:

@@ -113,6 +113,7 @@ All routes require `X-Mercury-Token`, except `GET /api/health` (open, returns no
 4. `currency` must be in the whitelist; default `USD`; `$`→USD, `€`→EUR, `£`→GBP.
 5. `is_complete` and `missing_fields` are **computed by the server** (email present, ≥1 valid item). The model's own flags are ignored.
 6. `source: "regex"` adds the warning `"Basic mode: single item only"`.
+7. **Latest read wins.** The palette reads while the person types and drops its previous request on every pause, so a new `/api/parse` call cancels the one still running (which stops the model working on it). The replaced request answers `409 PARSE_SUPERSEDED`; the palette has already abandoned it and ignores the reply. Without this, half-typed sentences queued ahead of the real one and pushed it past the 8-second limit into Basic mode.
 
 ### `POST /api/invoice`
 

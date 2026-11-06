@@ -23,7 +23,8 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Frontend palette flow (`palette.flow.test.tsx`) | 7 | Parse warnings clear once you edit the preview, box clears after a send, typing starts a new invoice, Esc starts over without closing, ⌘N, Recent invoices keeps the sent invoice |
 | Frontend accessibility and Dashboard (`a11y.test.tsx`, `dashboard.test.tsx`) | 34 | axe-core on the palette states and on both Dashboard screens; history list, filters, search, paging, empty and error states; invoice detail with payments; Settings health, AI model picker (switch, failure, unavailable models with reasons, cloud opt-in and fallback, setup guide, Ollama off, AI disabled), theme and clearing recents |
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
-| **Total** | **298** | Backend 177, frontend 121, plus a clean TypeScript check |
+| Backend, latest read wins (`test_parse_supersede.py`) | 3 | A newer read cancels the one still running and the old one answers `PARSE_SUPERSEDED`; a burst of ten half-typed reads runs only the last to the end; reads one after another are unaffected |
+| **Total** | **301** | Backend 180, frontend 121, plus a clean TypeScript check |
 
 The desktop shell has 5 more Rust unit tests for where the palette opens on multi-display setups. They need Rust, so they are not part of `make test`: run `cd frontend/src-tauri && cargo test --lib`.
 
@@ -36,6 +37,7 @@ Related commands: `make eval` (parse corpus against the real model), `make smoke
 | Token, create, send, read back in the PayPal sandbox (`make smoke`) | Pass: invoice reaches `SENT`, payer link returned |
 | Local model on the 33-case corpus (`make eval`) | 33 of 33 answered by the model itself |
 | Rule-based fallback on its 30 supported cases | 30 of 30 |
+| Slow typist against the real model (nine half-typed reads 0.7 s apart, then the full sentence) | Pass: the full sentence reads in 3.5 s with both items from the model; the model log shows each half-typed read cancelled after about 0.7 s. Before the fix, a slow typist queued a dozen reads and the last one fell back to Basic mode |
 | Ollama unreachable | Pass: fallback answers in milliseconds, health reports `llm: offline` |
 | Invoice sent from the UI (dark and light, several sends) | Pass: `Awaiting payment`, and it appears in Recent invoices after a reload |
 | Duplicate `request_id`, self-invoice, no token, no email in the text | Pass against the running API |
