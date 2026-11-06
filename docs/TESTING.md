@@ -25,6 +25,8 @@ How Mercury Cmd is tested, what you can try yourself in the running app, and the
 | Frontend contrast (`contrast.test.ts`) | 24 | WCAG AA and AAA contrast for every text color in dark and light themes |
 | **Total** | **298** | Backend 177, frontend 121, plus a clean TypeScript check |
 
+The desktop shell has 5 more Rust unit tests for where the palette opens on multi-display setups. They need Rust, so they are not part of `make test`: run `cd frontend/src-tauri && cargo test --lib`.
+
 Related commands: `make eval` (parse corpus against the real model), `make smoke TO=<buyer email>` (real PayPal round trip), `make shots` (regenerate screenshots).
 
 ## 2. Live checks against real services
@@ -104,10 +106,10 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
 | 31 | Hotkey | `⌘⇧Space` from another app | Palette appears with the input focused | Live |
-| 32 | Hide | Press the hotkey again, press `Esc` on an empty input, or click another app | Palette hides, a sent invoice stays on screen when you return | Live (desktop: hotkey opens it, `Esc` on an empty input hides it), To verify (hotkey toggle, click away, sent invoice on return) |
-| 33 | Resize | Type a sentence and wait | Window grows to fit the preview | To verify |
-| 34 | Menu-bar icon | Look at the menu bar | Icon appears; click toggles; right-click shows Open and Quit | To verify |
-| 35 | Native glass and theme | Switch appearance, use the theme toggle | Blur and tint follow dark and light | To verify |
+| 32 | Hide | Press the hotkey again, press `Esc` on an empty input, or click another app | Palette hides, a sent invoice stays on screen when you return | Live (desktop: hotkey opens it, `Esc` on an empty input, the hotkey again and clicking another app all hide it), To verify (sent invoice on return) |
+| 33 | Resize | Type a sentence and wait | Window grows to fit the preview | Live (desktop) |
+| 34 | Menu-bar icon | Look at the menu bar | Icon appears; click toggles; right-click shows Open and Quit | Live (desktop: icon appears, a click toggles the palette, right-click shows the menu) |
+| 35 | Native glass and theme | Switch appearance, use the theme toggle | Blur and tint follow dark and light | Live (desktop) |
 | 36 | No Dock icon | Look at the Dock | App does not appear there | Live (desktop, 5 Nov 2026: not in the Dock, and macOS reports it as a UI element) |
 | 37 | Custom hotkey | Set `MERCURY_HOTKEY=Alt+Space` and restart | New shortcut works | To verify |
 
@@ -119,9 +121,9 @@ Start with `make dev-web` (browser) or `make dev` (desktop). Use a sandbox buyer
 | 39 | Typing starts a new invoice | Type a new sentence over the success card | The old card fades out and the new sentence is read, no Esc needed | Automated |
 | 40 | Esc starts over | Press `Esc` on the success card | The palette stays open on the empty state; a second `Esc` hides it | Automated, Live (browser: first `Esc`), To verify (desktop hide) |
 | 41 | New invoice shortcut | `⌘N` from any state except sending | Back to the empty state, input focused | Automated |
-| 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | To verify (desktop) |
-| 43 | Move it | Drag the top edge or the footer | The window moves | To verify (desktop) |
-| 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | Live (desktop, mouse on the external display: centred on it, about a fifth of the way down), To verify (built-in display) |
+| 42 | Pin | Click the pin icon in the footer, then click another app | The palette stays open until you unpin or press `Esc` | Live (desktop: stays open when you click another app, hides again after unpinning) |
+| 43 | Move it | Drag the top edge or the footer | The window moves | Live (desktop) |
+| 44 | Opens where you are | Use the hotkey with the mouse on a second display | The palette appears near the top of that display | Automated (placement maths, 5 Rust tests), Live (desktop, 6 Nov 2026: both halves and the corner of the laptop screen and both sides of an external monitor, after the fix for mixed-resolution displays) |
 | 45 | Hotkey already taken | Set `MERCURY_HOTKEY` to a shortcut another app owns | The app still starts, the menu-bar icon works, a notice explains | To verify (desktop) |
 
 ### Dashboard (full window)
@@ -130,7 +132,7 @@ Open it from the footer icon, `⌘,`, or the menu-bar icon (Open Dashboard). In 
 
 | # | Scenario | Try | Expect | Status |
 | :-: | :--- | :--- | :--- | :---: |
-| 46 | Real window controls | Open the Dashboard on the desktop | Title bar with close, minimize and zoom; resizable; Dock icon while open | To verify (desktop) |
+| 46 | Real window controls | Open the Dashboard on the desktop | Title bar with close, minimize and zoom; resizable; Dock icon while open | Live (desktop: window controls, resize, Dock icon appears and goes when it closes) |
 | 47 | History from PayPal | Open **Invoices** | Your sandbox invoices, newest first, with amount, status and date | Live (browser) |
 | 48 | Filters and search | Click a status chip; type an email or number | The list narrows; search waits for a pause in typing | Live (API), Automated |
 | 49 | Paging | Use the next and previous arrows | Pages of 10 with the visible range | Automated |
