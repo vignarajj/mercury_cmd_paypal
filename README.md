@@ -10,6 +10,10 @@ Press a hotkey from any app, type *"Bill sarah@acme.co $1,200 for brand refresh 
 > Built for the **PayPal AI Hackathon** (Oct 1 to Nov 12, 2026). Everything here was created during the submission period.
 > **Sandbox only:** no real money moves, and the backend refuses to start against a non-sandbox PayPal host.
 
+## Demo video
+
+**[Watch the 2 minute demo on YouTube](https://youtu.be/cMtPYd3w884)**: a real run on a Mac, from one sentence to a paid sandbox invoice, including the no-model fallback. The narration is a computer-generated voice.
+
 ## Screenshots
 
 Real UI, rendered by the app itself (`make shots`). Dark and light themes follow the system setting, with a toggle in the footer.
